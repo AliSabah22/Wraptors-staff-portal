@@ -1,0 +1,46 @@
+---
+description: Next.js ChunkLoadError prevention — layout, webpack, imports, and dev workflow
+alwaysApply: true
+---
+
+# Next.js ChunkLoadError Prevention Rules
+
+## Chunk Loading & Build Stability
+
+- Always clear the `.next` cache directory when making structural changes to layouts, providers, or routing.
+- Never use `dynamic()` imports inside `app/layout.tsx` or `app/layout.js` — move them to page-level components.
+- Avoid circular imports across the entire project — before creating a new import, verify the dependency chain does not loop back.
+- Keep `app/layout.tsx` minimal: only global providers, fonts, and metadata — no heavy logic or dynamic data fetching.
+- Prefer `React.lazy()` and `Suspense` instead of `next/dynamic` when you need chunk boundaries and better control.
+
+## Import Discipline
+
+- Always use absolute imports (configured via tsconfig paths, e.g. `@/components/...`) instead of deep relative paths like `../../../`.
+- Never import server-only modules (`fs`, `path`, `crypto`) in client components — use `'use server'` or API routes.
+- Group and organize imports: external libraries first, then internal aliases, then relative imports.
+- When adding a new shared utility, check that it would not create a circular dependency before saving.
+
+## webpack & Build Config
+
+- `chunkLoadTimeout` is set to 30000ms in `next.config.ts` for slower development environments.
+- Do not split next.config webpack config across multiple files — keep all webpack overrides in one place.
+- Avoid overriding `output.filename` or `output.chunkFilename` unless absolutely necessary.
+- When adding a new webpack plugin, test the build immediately — plugin conflicts are a leading cause of chunk failures.
+
+## Providers & Context
+
+- Wrap all context providers in a dedicated `providers.tsx` client component, then import that single file in `layout.tsx`.
+- Never define a context provider and consume it in the same file if that file is also a layout.
+- Keep context values stable — avoid creating new objects/arrays inline as context values (causes unnecessary re-renders and can affect chunk loading).
+
+## Fonts & Static Assets
+
+- Always use `next/font` for font loading — never use `@import` in CSS files for Google Fonts.
+- Reference static assets via the `/public` path, not relative file imports inside components.
+
+## Development Workflow
+
+- Run `npm run dev:clean` (or `rm -rf .next && npm run dev`) after any change to `next.config.ts`, layout files, or tsconfig paths.
+- If a ChunkLoadError appears, first check the browser Network tab to see which chunk is failing and whether it's a 404 or timeout.
+- Keep Next.js and React/React-DOM versions pinned and in sync — mismatched peer deps can cause intermittent chunk failures.
+- Run `next build` locally before deploying to catch chunk splitting issues early.
