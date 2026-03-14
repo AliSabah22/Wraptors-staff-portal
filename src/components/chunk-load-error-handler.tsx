@@ -3,13 +3,19 @@
 import { useEffect } from "react";
 
 const RELOAD_KEY = "wraptors-chunk-reload";
+const RELOAD_TIME_KEY = "wraptors-chunk-reload-time";
 
-function isChunkLoadError(message: string): boolean {
+function isChunkLoadError(error: unknown): boolean {
+  if (error == null) return false;
+  const name = (error as Error).name ?? "";
+  const msg = String((error as Error).message ?? error);
   return (
-    message.includes("ChunkLoadError") ||
-    message.includes("Loading chunk") ||
-    message.includes("Loading CSS chunk") ||
-    message.includes("Failed to fetch dynamically imported module")
+    name === "ChunkLoadError" ||
+    msg.includes("ChunkLoadError") ||
+    msg.includes("Loading chunk") ||
+    msg.includes("loadChunk") ||
+    msg.includes("Loading CSS chunk") ||
+    msg.includes("Failed to fetch dynamically imported module")
   );
 }
 
@@ -24,36 +30,52 @@ export function ChunkLoadErrorHandler() {
     const clearReloadKey = () => {
       try {
         sessionStorage.removeItem(RELOAD_KEY);
+        sessionStorage.removeItem(RELOAD_TIME_KEY);
       } catch {
         // ignore
       }
     };
-    const t = window.setTimeout(clearReloadKey, 3000);
+    const t = window.setTimeout(clearReloadKey, 4000);
+
+    const tryReload = () => {
+      try {
+        const lastReload = sessionStorage.getItem(RELOAD_TIME_KEY);
+        const now = Date.now();
+        if (lastReload && now - Number(lastReload) < 8000) {
+          sessionStorage.removeItem(RELOAD_KEY);
+          sessionStorage.removeItem(RELOAD_TIME_KEY);
+          document.body.innerHTML =
+            '<div style="font-family:system-ui;padding:2rem;max-width:480px;margin:2rem auto;background:#1a1a1a;color:#e5e5e5;border-radius:8px;">' +
+            '<p style="margin:0 0 1rem;"><strong>Chunk load failed</strong></p>' +
+            '<p style="margin:0 0 1rem;font-size:0.9rem;">The dev server may have rebuilt. Try:</p>' +
+            '<ol style="margin:0 0 1rem;padding-left:1.25rem;font-size:0.9rem;">' +
+            '<li>Hard refresh (Cmd+Shift+R or Ctrl+Shift+R)</li>' +
+            '<li>Stop other <code>npm run dev</code> terminals, then run <code>npm run dev</code> once</li>' +
+            '<li>Clear site data for this origin and reload</li>' +
+            '</ol>' +
+            '<button type="button" onclick="location.reload()" style="padding:0.5rem 1rem;background:#d4af37;color:#000;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Retry</button>' +
+            '</div>';
+          return;
+        }
+        sessionStorage.setItem(RELOAD_KEY, "1");
+        sessionStorage.setItem(RELOAD_TIME_KEY, String(now));
+        window.location.reload();
+      } catch {
+        window.location.reload();
+      }
+    };
 
     const handleError = (event: ErrorEvent) => {
-      const msg = event.message ?? "";
-      if (!isChunkLoadError(msg)) return;
-      try {
-        if (sessionStorage.getItem(RELOAD_KEY)) return;
-        sessionStorage.setItem(RELOAD_KEY, "1");
-      } catch {
-        // ignore
-      }
+      if (!isChunkLoadError(event.error ?? event.message)) return;
       event.preventDefault();
-      window.location.reload();
+      event.stopPropagation();
+      tryReload();
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const msg = String(event.reason?.message ?? event.reason ?? "");
-      if (!isChunkLoadError(msg)) return;
-      try {
-        if (sessionStorage.getItem(RELOAD_KEY)) return;
-        sessionStorage.setItem(RELOAD_KEY, "1");
-      } catch {
-        // ignore
-      }
+      if (!isChunkLoadError(event.reason)) return;
       event.preventDefault();
-      window.location.reload();
+      tryReload();
     };
 
     window.addEventListener("error", handleError);

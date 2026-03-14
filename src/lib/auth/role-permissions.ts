@@ -47,6 +47,7 @@ const CEO_PERMISSIONS: Permission[] = [
   "invoices.view",
   "invoices.manage",
   "analytics.view_full",
+  "intelligence.view",
   "team.view",
   "team.manage",
   "notifications.view",

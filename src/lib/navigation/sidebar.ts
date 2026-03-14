@@ -19,6 +19,7 @@ import {
   Settings,
   MessageCircle,
   Upload,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { StaffRoleCode } from "@/lib/auth/roles";
@@ -35,6 +36,7 @@ export interface SidebarNavItem {
 function getSidebarForCEO(): SidebarNavItem[] {
   return [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Intelligence", href: "/intelligence", icon: Sparkles },
     { label: "Active Jobs", href: "/jobs", icon: Wrench },
     { label: "Customers", href: "/customers", icon: Users },
     { label: "Quote Requests", href: "/quote-requests", icon: FileText },
