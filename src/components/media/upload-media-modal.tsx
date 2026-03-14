@@ -20,8 +20,7 @@ import { uploadMediaSchema, type UploadMediaFormValues } from "@/lib/validations
 import { SHOP_ID } from "@/lib/constants";
 import type { MediaAsset } from "@/types";
 import { Camera, Check, Loader2, Upload } from "lucide-react";
-
-const UPLOAD_BY = "staff_1";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type UploadMediaModalProps = {
   open: boolean;
@@ -33,6 +32,7 @@ export function UploadMediaModal({ open, onOpenChange }: UploadMediaModalProps) 
   const [filePreview, setFilePreview] = useState<{ url: string; type: "photo" | "video" } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useCurrentUser();
   const addMedia = useMediaStore((s) => s.addMedia);
   const customers = useCustomersStore((s) => s.customers);
   const jobs = useJobsStore((s) => s.jobs);
@@ -96,7 +96,7 @@ export function UploadMediaModal({ open, onOpenChange }: UploadMediaModalProps) 
       title: data.title?.trim(),
       caption: data.caption?.trim(),
       visibility: "internal",
-      uploadedBy: UPLOAD_BY,
+      uploadedBy: user?.id ?? "staff_1",
       createdAt: now,
     };
     addMedia(asset);

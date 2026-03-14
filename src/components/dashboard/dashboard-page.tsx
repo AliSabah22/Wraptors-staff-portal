@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useJobsStore, useQuotesStore, useNotificationsStore, useTeamStore } from "@/stores";
+import { useQuoteBuilderStore } from "@/stores/quote-builder";
+import { canViewQuoteStats } from "@/lib/quote-builder/access";
 import { mockInvoices } from "@/data/mock";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getRangeForPreset, isDateInRange } from "@/lib/date-range";
@@ -45,6 +47,8 @@ import {
   Pie,
   Cell,
   Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 
 const container = {
@@ -85,55 +89,91 @@ export function DashboardPage() {
   return <CEODashboard />;
 }
 
+const todayStr = () => new Date().toDateString();
+
 export function CEODashboard() {
   const [dateRange, setDateRange] = useState(() => getRangeForPreset("last_30"));
 
+  const { user, role } = useCurrentUser();
   const jobs = useJobsStore((s) => s.jobs) ?? [];
   const quotes = useQuotesStore((s) => s.quotes) ?? [];
-  const notifications = useNotificationsStore((s) => s.items) ?? [];
+  const allNotifications = useNotificationsStore((s) => s.items) ?? [];
+
+  const notifications = useMemo(
+    () => allNotifications.filter((n) => n.userId === user?.id),
+    [allNotifications, user?.id]
+  );
 
   const jobsInRange = useMemo(
     () => jobs.filter((j) => isDateInRange(j.dueDate, dateRange) || isDateInRange(j.createdAt, dateRange)),
     [jobs, dateRange]
   );
-  const activeJobs = jobsInRange.filter((j) => j.stage !== "ready" && !j.completedAt);
-  const jobsDueToday = jobs.filter((j) => {
-    const due = new Date(j.dueDate).toDateString();
-    const today = new Date().toDateString();
-    return due === today && j.stage !== "ready";
-  });
-  const pendingQuotes = quotes.filter((q) => q.status === "new" || q.status === "contacted");
-  const monthlyRevenue = mockInvoices
-    .filter((i) => i.status === "paid" || i.status === "sent")
-    .reduce((sum, i) => sum + i.total, 0) + 22700; // mock extra
-  const completedJobsInRange = jobsInRange.filter((j) => j.progress === 100);
-  const completedJobs = jobs.filter((j) => j.progress === 100);
-  const avgJobValue =
-    completedJobsInRange.length > 0
-      ? completedJobsInRange.reduce((s, j) => s + 4500, 0) / completedJobsInRange.length
-      : completedJobs.length > 0
-        ? completedJobs.reduce((s, j) => s + 4500, 0) / completedJobs.length
-        : 0;
-  const quotedCount = quotes.filter((q) => q.status === "quoted" || q.status === "booked").length;
-  const conversionRate = quotes.length > 0 ? Math.round((quotedCount / quotes.length) * 100) : 0;
 
-  const jobStatusPieData = [
-    {
-      name: "In Progress",
-      value: jobsInRange.filter((j) => j.stage !== "intake" && j.stage !== "ready").length,
-      color: "#C8A45D",
-    },
-    {
-      name: "Intake",
-      value: jobsInRange.filter((j) => j.stage === "intake").length,
-      color: "#737373",
-    },
-    {
-      name: "Ready",
-      value: jobsInRange.filter((j) => j.stage === "ready").length,
-      color: "#22c55e",
-    },
-  ].filter((d) => d.value > 0);
+  const activeJobs = useMemo(
+    () => jobsInRange.filter((j) => j.stage !== "ready" && !j.completedAt),
+    [jobsInRange]
+  );
+
+  const jobsDueToday = useMemo(() => {
+    const today = todayStr();
+    return jobs.filter((j) => new Date(j.dueDate).toDateString() === today && j.stage !== "ready");
+  }, [jobs]);
+
+  const pendingQuotes = useMemo(
+    () => quotes.filter((q) => q.status === "new" || q.status === "contacted"),
+    [quotes]
+  );
+
+  const monthlyRevenue = useMemo(
+    () =>
+      mockInvoices
+        .filter((i) => i.status === "paid" || i.status === "sent")
+        .reduce((sum, i) => sum + i.total, 0) + 22700,
+    []
+  );
+
+  const completedJobsInRange = useMemo(
+    () => jobsInRange.filter((j) => j.progress === 100),
+    [jobsInRange]
+  );
+
+  const completedJobs = useMemo(() => jobs.filter((j) => j.progress === 100), [jobs]);
+
+  const { avgJobValue, quotedCount, conversionRate } = useMemo(() => {
+    const completed = jobsInRange.filter((j) => j.progress === 100);
+    const fallbackCompleted = jobs.filter((j) => j.progress === 100);
+    const avg =
+      completed.length > 0
+        ? completed.reduce((s) => s + 4500, 0) / completed.length
+        : fallbackCompleted.length > 0
+          ? fallbackCompleted.reduce((s) => s + 4500, 0) / fallbackCompleted.length
+          : 0;
+    const quoted = quotes.filter((q) => q.status === "quoted" || q.status === "booked").length;
+    const conversion = quotes.length > 0 ? Math.round((quoted / quotes.length) * 100) : 0;
+    return { avgJobValue: avg, quotedCount: quoted, conversionRate: conversion };
+  }, [jobsInRange, jobs, quotes]);
+
+  const jobStatusPieData = useMemo(
+    () =>
+      [
+        {
+          name: "In Progress",
+          value: jobsInRange.filter((j) => j.stage !== "intake" && j.stage !== "ready").length,
+          color: "#C8A45D",
+        },
+        {
+          name: "Intake",
+          value: jobsInRange.filter((j) => j.stage === "intake").length,
+          color: "#737373",
+        },
+        {
+          name: "Ready",
+          value: jobsInRange.filter((j) => j.stage === "ready").length,
+          color: "#22c55e",
+        },
+      ].filter((d) => d.value > 0),
+    [jobsInRange]
+  );
 
   const hasJobDistributionData = jobStatusPieData.length > 0;
 
@@ -146,6 +186,15 @@ export function CEODashboard() {
   );
 
   const teamMembers = useTeamStore((s) => s.members) ?? [];
+  const getQuoteBuilderStats = useQuoteBuilderStore((s) => s.getStats);
+  const quotePipelineStats = useMemo(() => {
+    if (!canViewQuoteStats(role)) return null;
+    try {
+      return getQuoteBuilderStats();
+    } catch {
+      return null;
+    }
+  }, [role, getQuoteBuilderStats]);
   const activeJobsForWorkload = useMemo(
     () => (jobs ?? []).filter((j) => j.stage !== "ready" && !j.completedAt),
     [jobs]
@@ -356,8 +405,8 @@ export function CEODashboard() {
         </Card>
       </motion.div>
 
-      {/* Bottom row: Activity, Workload, Quick actions */}
-      <motion.div variants={item} className="grid gap-6 lg:grid-cols-3">
+      {/* Bottom row: Activity, Workload, Quote Pipeline, Quick actions */}
+      <motion.div variants={item} className="grid gap-6 lg:grid-cols-4">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -437,10 +486,62 @@ export function CEODashboard() {
                     <Plus className="h-4 w-4" /> New quote
                   </Link>
                 </Button>
+                <Button variant="outline" size="sm" className="justify-start gap-2" asChild>
+                  <Link href="/quotes/new">
+                    <Plus className="h-4 w-4" /> Smart Quote
+                  </Link>
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
+        {quotePipelineStats && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Quote Pipeline</CardTitle>
+                <CardDescription>Smart Quote Builder</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/quotes">View all</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-xl font-bold text-wraptors-gold">{quotePipelineStats.sentThisMonth}</p>
+                  <p className="text-xs text-wraptors-muted">Sent this month</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{quotePipelineStats.acceptanceRate}%</p>
+                  <p className="text-xs text-wraptors-muted">Acceptance rate</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{formatCurrency(quotePipelineStats.averageQuoteValue)}</p>
+                  <p className="text-xs text-wraptors-muted">Avg value</p>
+                </div>
+              </div>
+              <div className="h-[120px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { status: "Draft", count: quotePipelineStats.quotesByStatus.draft, fill: "#737373" },
+                      { status: "Sent", count: quotePipelineStats.quotesByStatus.sent, fill: "#C8A45D" },
+                      { status: "Accepted", count: quotePipelineStats.quotesByStatus.accepted, fill: "#22c55e" },
+                      { status: "Declined", count: quotePipelineStats.quotesByStatus.declined, fill: "#ef4444" },
+                      { status: "Expired", count: quotePipelineStats.quotesByStatus.expired, fill: "#f59e0b" },
+                    ]}
+                    margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                  >
+                    <XAxis dataKey="status" tick={{ fontSize: 10 }} stroke="#737373" />
+                    <YAxis width={24} tick={{ fontSize: 10 }} stroke="#737373" />
+                    <Bar dataKey="count" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </motion.div>
     </motion.div>
   );

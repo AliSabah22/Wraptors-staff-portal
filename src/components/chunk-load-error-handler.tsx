@@ -15,10 +15,21 @@ function isChunkLoadError(message: string): boolean {
 
 /**
  * Listens for unhandled ChunkLoadErrors (e.g. after deploy or hot reload)
- * and triggers a single full page reload to recover.
+ * and triggers a full page reload to recover. Clears the reload key after
+ * successful load so a future chunk error can trigger another reload.
  */
 export function ChunkLoadErrorHandler() {
   useEffect(() => {
+    // Allow future ChunkLoadErrors to trigger reload after we've been mounted (successful load)
+    const clearReloadKey = () => {
+      try {
+        sessionStorage.removeItem(RELOAD_KEY);
+      } catch {
+        // ignore
+      }
+    };
+    const t = window.setTimeout(clearReloadKey, 3000);
+
     const handleError = (event: ErrorEvent) => {
       const msg = event.message ?? "";
       if (!isChunkLoadError(msg)) return;
@@ -48,6 +59,7 @@ export function ChunkLoadErrorHandler() {
     window.addEventListener("error", handleError);
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
     return () => {
+      window.clearTimeout(t);
       window.removeEventListener("error", handleError);
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };

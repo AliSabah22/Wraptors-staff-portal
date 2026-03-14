@@ -4,19 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wraptors-gold focus-visible:ring-offset-2 focus-visible:ring-offset-wraptors-black disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wraptors-gold focus-visible:ring-offset-2 focus-visible:ring-offset-wraptors-black disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-wraptors-gold text-wraptors-black hover:bg-wraptors-gold-light shadow-gold",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
+          "bg-wraptors-gold text-wraptors-black hover:bg-wraptors-gold-light shadow-gold active:bg-wraptors-gold/90",
+        destructive: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800",
         outline:
-          "border border-wraptors-border bg-transparent text-wraptors-muted-light hover:bg-wraptors-surface hover:text-white hover:border-wraptors-gold/50",
+          "border border-wraptors-border bg-transparent text-wraptors-muted-light hover:bg-wraptors-surface hover:text-white hover:border-wraptors-gold/50 active:bg-wraptors-surface/80",
         secondary:
-          "bg-wraptors-surface text-wraptors-muted-light hover:bg-wraptors-surface-hover hover:text-white",
-        ghost: "text-wraptors-muted-light hover:bg-wraptors-surface hover:text-white",
-        link: "text-wraptors-gold underline-offset-4 hover:underline",
+          "bg-wraptors-surface text-wraptors-muted-light hover:bg-wraptors-surface-hover hover:text-white active:bg-wraptors-surface-hover/90",
+        ghost: "text-wraptors-muted-light hover:bg-wraptors-surface hover:text-white active:bg-wraptors-surface/80",
+        link: "text-wraptors-gold underline-offset-4 hover:underline active:opacity-80",
       },
       size: {
         default: "h-10 px-4 py-2",

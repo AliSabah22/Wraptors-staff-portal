@@ -15,9 +15,11 @@ import {
   pointerWithin,
 } from "@dnd-kit/core";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { DollarSign, Trash2 } from "lucide-react";
 import type { PipelineLead, PipelineStage } from "@/types";
+import { PIPELINE_LEAD_SOURCE_META } from "@/types";
 
 interface Column {
   id: string;
@@ -108,6 +110,18 @@ function LeadCardContent({
           </button>
         ) : (
           <p className="font-medium text-white">{lead.name}</p>
+        )}
+        {(lead.source === PIPELINE_LEAD_SOURCE_META || lead.formName) && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            {lead.source === PIPELINE_LEAD_SOURCE_META && (
+              <Badge variant="outline" className="text-[10px] border-[#1877F2]/50 text-[#1877F2] bg-[#1877F2]/10">
+                Meta Lead Ads
+              </Badge>
+            )}
+            {lead.formName && (
+              <span className="text-[10px] text-wraptors-muted">{lead.formName}</span>
+            )}
+          </div>
         )}
         <p className="text-xs text-wraptors-muted mt-0.5">{lead.contact}</p>
         {lead.value != null && (

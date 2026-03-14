@@ -84,6 +84,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   const [assignedTechnicianId, setAssignedTechnicianId] = useState(UNASSIGNED_VALUE);
   const [jobPriority, setJobPriority] = useState<JobPriority>("standard");
   const [jobParamsError, setJobParamsError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const resetAll = () => {
     setStep("choose");
@@ -92,6 +93,7 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
     setVehicleId(null);
     setCreatedCustomerId(null);
     setSuccessId(null);
+    setIsCreating(false);
     customerForm.reset();
     setJobServiceId("");
     setJobDueDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
@@ -154,6 +156,8 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
   );
 
   const createJob = () => {
+    if (isCreating) return;
+    setIsCreating(true);
     if (!customerId || !vehicleId) return;
     const err = !jobServiceId
       ? "Select a service"
@@ -544,8 +548,8 @@ export function CreateJobModal({ open, onOpenChange }: CreateJobModalProps) {
                   >
                     Back
                   </Button>
-                  <Button onClick={createJob}>
-                    Create job (Intake)
+                  <Button onClick={createJob} disabled={isCreating}>
+                    {isCreating ? "Creating…" : "Create job (Intake)"}
                   </Button>
                 </DialogFooter>
               </div>

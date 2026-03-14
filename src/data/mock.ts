@@ -775,6 +775,28 @@ export const mockNotifications: NotificationItem[] = [
     link: "/jobs/job_3",
     createdAt: "2024-03-12T14:15:00Z",
   },
+  {
+    id: "notif_chat_1",
+    shopId: SHOP_ID,
+    userId: "staff_ceo",
+    type: "chat_mention",
+    title: "Sam Rivera mentioned you",
+    message: "In Job #2041 — BMW M4 Full Wrap: Pickup is set for March 15 — can we confirm…",
+    read: false,
+    link: "/jobs/job_1",
+    createdAt: "2024-03-12T10:05:00Z",
+  },
+  {
+    id: "notif_chat_2",
+    shopId: SHOP_ID,
+    userId: "staff_technician",
+    type: "chat_mention",
+    title: "Sam Rivera mentioned you",
+    message: "In Job #2043 — Tesla Model X: Customer asked if we can do pickup Friday 4pm…",
+    read: false,
+    link: "/jobs/job_3",
+    createdAt: "2024-03-12T14:25:00Z",
+  },
 ];
 
 // Calendar events derived from jobs (drop-off, pickup, key dates)

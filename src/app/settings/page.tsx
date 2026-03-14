@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings, Bell, Shield, Palette } from "lucide-react";
+import { MetaIntegrationCard } from "@/components/settings/meta-integration-card";
 
 export default function SettingsPage() {
   return (
@@ -72,15 +73,17 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <MetaIntegrationCard />
+
       <Card className="border-wraptors-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-wraptors-gold" /> Integrations
+            <Settings className="h-4 w-4 text-wraptors-gold" /> More integrations
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-wraptors-muted">
-            Placeholder for Supabase, Stripe, SMS, etc.
+            Supabase, Stripe, SMS, and other integrations can be added here.
           </p>
         </CardContent>
       </Card>

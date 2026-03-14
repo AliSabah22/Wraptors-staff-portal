@@ -38,6 +38,7 @@ function getSidebarForCEO(): SidebarNavItem[] {
     { label: "Active Jobs", href: "/jobs", icon: Wrench },
     { label: "Customers", href: "/customers", icon: Users },
     { label: "Quote Requests", href: "/quote-requests", icon: FileText },
+    { label: "Quotes", href: "/quotes", icon: FileText },
     { label: "Pipeline", href: "/pipeline", icon: Kanban },
     { label: "Calendar", href: "/calendar", icon: Calendar },
     { label: "Media Library", href: "/media", icon: Image },
@@ -46,6 +47,7 @@ function getSidebarForCEO(): SidebarNavItem[] {
     { label: "Analytics", href: "/analytics", icon: BarChart3 },
     { label: "Team", href: "/team", icon: UserCog },
     { label: "Notifications", href: "/notifications", icon: Bell },
+    { label: "Chat", href: "/chat", icon: MessageCircle },
     { label: "Settings", href: "/settings", icon: Settings },
   ];
 }
@@ -59,10 +61,12 @@ function getSidebarForReceptionist(): SidebarNavItem[] {
     { label: "Customers", href: "/customers", icon: Users },
     { label: "Active Jobs", href: "/jobs", icon: Wrench },
     { label: "Quote Requests", href: "/quote-requests", icon: FileText },
+    { label: "Quotes", href: "/quotes", icon: FileText },
     { label: "Pipeline", href: "/pipeline", icon: Kanban },
     { label: "Calendar", href: "/calendar", icon: Calendar },
     { label: "Media Library", href: "/media", icon: Image },
     { label: "Services", href: "/services", icon: Package },
+    { label: "Team", href: "/team", icon: UserCog },
     { label: "Notifications", href: "/notifications", icon: Bell },
     { label: "Chat", href: "/chat", icon: MessageCircle },
   ];
@@ -76,6 +80,7 @@ function getSidebarForTechnician(): SidebarNavItem[] {
     { label: "Dashboard", href: "/dashboard/my-jobs", icon: LayoutDashboard },
     { label: "My Jobs", href: "/jobs", icon: Wrench },
     { label: "Uploads", href: "/media", icon: Upload },
+    { label: "Team", href: "/team", icon: UserCog },
     { label: "Notifications", href: "/notifications", icon: Bell },
     { label: "Chat", href: "/chat", icon: MessageCircle },
   ];

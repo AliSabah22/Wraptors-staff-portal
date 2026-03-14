@@ -20,7 +20,7 @@ import {
   isSameMonth,
   parseISO,
 } from "date-fns";
-import { useJobsStore, useCustomersStore, useVehiclesStore, useServicesStore, useTeamStore } from "@/stores";
+import { useJobsStore, useCustomersStore, useVehiclesStore, useServicesStore, useTeamStore, getJobsNeedingSchedulingFilter } from "@/stores";
 import { getScopedJobs } from "@/lib/data-scope/scope";
 import {
   buildCalendarEvents,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/calendar/job-events";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRehydrateJobsOnFocus } from "@/hooks/useRehydrateJobsOnFocus";
+import { useJobsForTracking } from "@/hooks/useJobsForTracking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,7 @@ import {
   UserCog,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { mockServices } from "@/data/mock";
 
@@ -67,9 +69,9 @@ export default function CalendarPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [jobsHydrated, setJobsHydrated] = useState(false);
 
-  const jobs = useJobsStore((s) => s.jobs);
+  const { jobs, trackingKey } = useJobsForTracking();
 
-  // Rehydrate jobs when window gains focus (e.g. after editing in another tab) so unscheduled list updates
+  // Rehydrate jobs so "Unscheduled jobs" and tracking stay in sync when switching tabs or navigating
   useRehydrateJobsOnFocus();
 
   // Re-render when persisted jobs have loaded so calendar shows saved scheduling
@@ -89,7 +91,10 @@ export default function CalendarPage() {
   const services = useServicesStore((s) => s.services).filter((s) => s.active);
   const { user, role } = useCurrentUser();
 
-  const scopedJobs = useMemo(() => getScopedJobs(role, user?.id, jobs), [role, user?.id, jobs]);
+  const scopedJobs = useMemo(
+    () => getScopedJobs(role, user?.id, Array.isArray(jobs) ? jobs : []),
+    [role, user?.id, jobs]
+  );
 
   const filteredJobs = useMemo(() => {
     let list = scopedJobs;
@@ -175,15 +180,9 @@ export default function CalendarPage() {
   const unscheduledJobs = useMemo(
     () =>
       filteredJobs
-        .filter(
-          (j) =>
-            !j.completedAt &&
-            (j.stage === "intake" ||
-              !j.assignedTechnicianId ||
-              !j.scheduledStartDate)
-        )
+        .filter((j) => getJobsNeedingSchedulingFilter(j))
         .sort((a, b) => new Date(a.dueDate ?? 0).getTime() - new Date(b.dueDate ?? 0).getTime()),
-    [filteredJobs]
+    [filteredJobs, trackingKey]
   );
 
   const upcomingPickups = useMemo(
@@ -367,10 +366,21 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
         <Card className="border-wraptors-border bg-wraptors-charcoal/50">
-          <CardContent className="pt-4 pb-4">
-            <p className="text-2xl font-bold tabular-nums text-white">{unscheduledJobs.length}</p>
-            <p className="text-xs font-medium text-wraptors-muted mt-0.5">Unscheduled jobs</p>
-            <p className="text-[11px] text-wraptors-muted/80 mt-0.5">Jobs missing technician or schedule</p>
+          <CardContent className="pt-4 pb-4 flex flex-row items-start justify-between gap-2">
+            <div>
+              <p className="text-2xl font-bold tabular-nums text-white">{unscheduledJobs.length}</p>
+              <p className="text-xs font-medium text-wraptors-muted mt-0.5">Unscheduled jobs</p>
+              <p className="text-[11px] text-wraptors-muted/80 mt-0.5">Jobs missing technician or schedule</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-wraptors-muted hover:text-wraptors-gold"
+              onClick={() => useJobsStore.persist?.rehydrate?.()}
+              title="Sync from storage"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
         <Card
@@ -567,13 +577,24 @@ export default function CalendarPage() {
         <div className="w-full lg:w-80 shrink-0 space-y-5">
           {/* 1. Unscheduled jobs */}
           <Card className="border-wraptors-border bg-wraptors-charcoal/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-white">
-                Unscheduled jobs
-              </CardTitle>
-              <p className="text-[11px] text-wraptors-muted mt-0.5">
-                Jobs missing technician or schedule
-              </p>
+            <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm font-semibold text-white">
+                  Unscheduled jobs
+                </CardTitle>
+                <p className="text-[11px] text-wraptors-muted mt-0.5">
+                  Jobs missing technician or schedule
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-wraptors-muted hover:text-wraptors-gold"
+                onClick={() => useJobsStore.persist?.rehydrate?.()}
+                title="Sync from storage"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </CardHeader>
             <CardContent>
               {unscheduledJobs.length === 0 ? (
@@ -597,7 +618,7 @@ export default function CalendarPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-medium text-wraptors-gold">
-                          Due {format(parseISO(j.dueDate), "MMM d")}
+                          Due {j.dueDate ? format(parseISO(j.dueDate), "MMM d") : "—"}
                         </span>
                         {!j.assignedTechnicianId && (
                           <span className="text-[10px] text-amber-400">No tech</span>

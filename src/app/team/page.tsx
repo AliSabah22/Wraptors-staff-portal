@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useJobsStore, useTeamStore } from "@/stores";
+import { useJobsStore, useTeamStore, useAuthStore } from "@/stores";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, MessageCircle } from "lucide-react";
 import type { StaffUser } from "@/types";
 import { AddTeamMemberModal } from "@/components/team/add-team-member-modal";
 
@@ -25,6 +26,8 @@ function roleLabel(role: string) {
 }
 
 export default function TeamPage() {
+  const router = useRouter();
+  const currentUser = useAuthStore((s) => s.user);
   const jobs = useJobsStore((s) => s.jobs);
   const members = useTeamStore((s) => s.members);
   const removeMember = useTeamStore((s) => s.removeMember);
@@ -82,25 +85,49 @@ export default function TeamPage() {
                   </Badge>
                   <p className="text-sm text-wraptors-muted mt-1">{member.email}</p>
                 </div>
-                {canManageTeam && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-wraptors-muted hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                    onClick={() => setMemberToRemove(member)}
-                    aria-label={`Remove ${member.name} from team`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {currentUser && member.id !== currentUser.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-wraptors-gold hover:bg-wraptors-gold/10"
+                      onClick={() => router.push(`/chat?dm=${member.id}`)}
+                      aria-label={`Message ${member.name}`}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canManageTeam && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-wraptors-muted hover:text-red-400 hover:bg-red-500/10"
+                      onClick={() => setMemberToRemove(member)}
+                      aria-label={`Remove ${member.name} from team`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 {member.role === "technician" ? (
                   <p className="text-sm text-wraptors-muted-light">
                     {assignedJobs.length} active job{assignedJobs.length !== 1 ? "s" : ""}
                   </p>
                 ) : (
                   <p className="text-sm text-wraptors-muted">—</p>
+                )}
+                {currentUser && member.id !== currentUser.id && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2 text-wraptors-gold border-wraptors-gold/50 hover:bg-wraptors-gold/10 hover:text-white"
+                    onClick={() => router.push(`/chat?dm=${member.id}`)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Direct message
+                  </Button>
                 )}
               </CardContent>
             </Card>

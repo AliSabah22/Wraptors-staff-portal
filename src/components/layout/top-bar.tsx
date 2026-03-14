@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Search, Plus, Bell, UserPlus, FileText, Briefcase, CheckCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,27 +24,37 @@ import { getRoleLabel } from "@/lib/auth/roles";
 export function TopBar() {
   const router = useRouter();
   const { setSearchOpen, setAddCustomerModalOpen, setCreateQuoteModalOpen, setCreateJobModalOpen } = useUIStore();
-  const { items, markAsRead, markAllAsRead } = useNotificationsStore();
+  const items = useNotificationsStore((s) => s.items);
+  const markAsRead = useNotificationsStore((s) => s.markAsRead);
+  const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead);
   const { user, role } = useCurrentUser();
   const { hasPermission } = usePermissions();
   const logout = useAuthStore((s) => s.logout);
-  const unreadCount = items.filter((n) => !n.read).length;
+
+  const myNotifications = useMemo(
+    () => items.filter((n) => n.userId === user?.id),
+    [items, user?.id]
+  );
+  const unreadCount = useMemo(
+    () => myNotifications.filter((n) => !n.read).length,
+    [myNotifications]
+  );
 
   const canQuickCreate =
     hasPermission("customers.create") ||
     hasPermission("quotes.create") ||
     hasPermission("jobs.create");
 
-  const handleQuickCreate = (action: "customer" | "quote" | "job") => {
+  const handleQuickCreate = useCallback((action: "customer" | "quote" | "job") => {
     if (action === "customer") setAddCustomerModalOpen(true);
     else if (action === "quote") setCreateQuoteModalOpen(true);
     else setCreateJobModalOpen(true);
-  };
+  }, [setAddCustomerModalOpen, setCreateQuoteModalOpen, setCreateJobModalOpen]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     router.replace("/login");
-  };
+  }, [logout, router]);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-wraptors-border bg-wraptors-charcoal/95 backdrop-blur supports-[backdrop-filter]:bg-wraptors-charcoal/80 px-6">
@@ -120,13 +131,13 @@ export function TopBar() {
               )}
             </div>
             <ScrollArea className="max-h-[320px]">
-              {items.length === 0 ? (
+              {myNotifications.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-wraptors-muted">
                   No notifications
                 </div>
               ) : (
                 <div className="py-1">
-                  {items.map((n) => (
+                  {myNotifications.map((n) => (
                     <Link
                       key={n.id}
                       href={n.link ?? "/notifications"}

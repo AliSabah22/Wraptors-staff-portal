@@ -30,6 +30,8 @@ const CEO_PERMISSIONS: Permission[] = [
   "quotes.create",
   "quotes.edit",
   "quotes.convert",
+  "quotes.approve_discount",
+  "quotes.stats",
   "pipeline.view",
   "pipeline.edit",
   "calendar.view",
@@ -79,6 +81,7 @@ const RECEPTIONIST_PERMISSIONS: Permission[] = [
   "media.upload",
   "services.view",
   "notifications.view",
+  "team.view",
   "chat.view",
   "chat.send",
 ];
@@ -92,6 +95,7 @@ const TECHNICIAN_PERMISSIONS: Permission[] = [
   "media.view_assigned",
   "media.upload",
   "notifications.view",
+  "team.view",
   "chat.view",
   "chat.send",
 ];

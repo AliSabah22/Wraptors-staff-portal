@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { AppLayout } from "@/components/layout/app-layout";
+import { JobsHydrationGate } from "@/components/jobs/JobsHydrationGate";
 
 const LOGIN_PATH = "/login";
 
@@ -27,7 +28,9 @@ function AuthLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthGuard>
-      <AppLayout>{children}</AppLayout>
+      <JobsHydrationGate>
+        <AppLayout>{children}</AppLayout>
+      </JobsHydrationGate>
     </AuthGuard>
   );
 }

@@ -18,7 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePipelineStore } from "@/stores";
 import { z } from "zod";
 import type { PipelineLead } from "@/types";
+import { PIPELINE_LEAD_SOURCE_META } from "@/types";
 import { User, Phone, Mail, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const leadProfileSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -85,6 +87,18 @@ export function LeadProfileModal({
           </DialogTitle>
         </DialogHeader>
 
+        {(lead.source === PIPELINE_LEAD_SOURCE_META || lead.formName) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {lead.source === PIPELINE_LEAD_SOURCE_META && (
+              <Badge variant="outline" className="border-[#1877F2]/50 text-[#1877F2] bg-[#1877F2]/10">
+                Meta Lead Ads
+              </Badge>
+            )}
+            {lead.formName && (
+              <span className="text-xs text-wraptors-muted">Form: {lead.formName}</span>
+            )}
+          </div>
+        )}
         <p className="text-sm text-wraptors-muted pt-1">
           This lead isn’t linked to a customer yet. Edit details below; link to a customer from the full profile later.
         </p>

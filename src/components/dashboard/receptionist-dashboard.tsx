@@ -3,13 +3,14 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useRehydrateJobsOnFocus } from "@/hooks/useRehydrateJobsOnFocus";
+import { useJobsForTracking } from "@/hooks/useJobsForTracking";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useJobsStore, useQuotesStore, useCustomersStore, useTeamStore, useVehiclesStore, useServicesStore, useUIStore } from "@/stores";
+import { useJobsStore, useQuotesStore, useCustomersStore, useTeamStore, useVehiclesStore, useServicesStore, useUIStore, getJobsNeedingSchedulingFilter } from "@/stores";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Calendar, FileText, Users, Wrench, Package, UserCog, UserPlus } from "lucide-react";
+import { Calendar, FileText, Users, Wrench, Package, UserCog, UserPlus, RefreshCw } from "lucide-react";
 
 const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } };
 
@@ -22,7 +23,7 @@ function getJobDisplayId(jobId: string): string {
 
 export function ReceptionistDashboard() {
   useRehydrateJobsOnFocus();
-  const jobs = useJobsStore((s) => s.jobs) ?? [];
+  const { jobs, trackingKey } = useJobsForTracking();
   const quotes = useQuotesStore((s) => s.quotes) ?? [];
   const customers = useCustomersStore((s) => s.customers) ?? [];
   const teamMembers = useTeamStore((s) => s.members) ?? [];
@@ -49,15 +50,17 @@ export function ReceptionistDashboard() {
     [teamMembers, activeJobsForWorkload]
   );
   const maxWorkloadForBar = Math.max(1, ...techWorkload.map((t) => t.jobs), 5);
+  // Drop-offs today: vehicles expected in today (dropOffDate or scheduledStartDate), not due date.
   const dropOffsToday = useMemo(
     () =>
-      jobs.filter(
-        (j) =>
-          j?.dueDate &&
-          new Date(j.dueDate).toDateString() === today &&
-          j.stage !== "ready" &&
-          !j.completedAt
-      ),
+      jobs.filter((j) => {
+        if (j?.stage === "ready" || j?.completedAt) return false;
+        const dropDateRaw =
+          j?.dropOffDate ?? j?.scheduledStartDate?.slice(0, 10) ?? j?.createdAt?.slice(0, 10);
+        if (!dropDateRaw) return false;
+        const dropDate = new Date(dropDateRaw.slice(0, 10)).toDateString();
+        return dropDate === today;
+      }),
     [jobs, today]
   );
   const pickupsToday = useMemo(
@@ -80,15 +83,11 @@ export function ReceptionistDashboard() {
     );
   }, [customers]);
 
-  // Same definition as calendar "Unscheduled jobs": intake OR no technician OR no scheduled start
+  // Use shared filter from store (same as calendar "Unscheduled jobs")
   const jobsNeedingScheduling = useMemo(() => {
     const list = Array.isArray(jobs) ? jobs : [];
     const needing = list
-      .filter(
-        (j) =>
-          !j?.completedAt &&
-          (j?.stage === "intake" || !j?.assignedTechnicianId || !j?.scheduledStartDate)
-      )
+      .filter((j) => getJobsNeedingSchedulingFilter(j))
       .sort((a, b) => new Date(a.dueDate ?? 0).getTime() - new Date(b.dueDate ?? 0).getTime());
     return needing.map((j) => {
       const customer = customers.find((c) => c?.id === j.customerId);
@@ -102,7 +101,7 @@ export function ReceptionistDashboard() {
         jobDisplayId: getJobDisplayId(j.id ?? ""),
       };
     });
-  }, [jobs, customers, getVehicleById, getServiceById]);
+  }, [jobs, customers, getVehicleById, getServiceById, trackingKey]);
 
   return (
     <motion.div
@@ -160,7 +159,18 @@ export function ReceptionistDashboard() {
         <Card className="border-wraptors-border bg-wraptors-charcoal/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-wraptors-muted">Needing scheduling</CardTitle>
-            <Wrench className="h-4 w-4 text-wraptors-gold" />
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-wraptors-muted hover:text-wraptors-gold"
+                onClick={() => useJobsStore.persist?.rehydrate?.()}
+                title="Sync from storage (e.g. after editing in another tab)"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Wrench className="h-4 w-4 text-wraptors-gold" />
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-white">{jobsNeedingScheduling.length}</p>
