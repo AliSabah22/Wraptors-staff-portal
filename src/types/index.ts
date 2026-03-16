@@ -365,7 +365,9 @@ export type NotificationType =
   | "meta_lead"
   | "system"
   | "chat_mention"
-  | "chat_message";
+  | "chat_message"
+  | "campaign_live"
+  | "campaign_scheduled";
 
 /** Chat thread type: job-linked, direct message, or channel. */
 export type ChatThreadType = "job" | "dm" | "channel";
@@ -543,4 +545,71 @@ export interface QuoteFollowUp {
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// ——— Campaigns (promotional campaigns — demo distribution only) ———
+
+export type CampaignType = "product" | "service" | "category" | "custom";
+export type CampaignStatus =
+  | "draft"
+  | "scheduled"
+  | "active"
+  | "paused"
+  | "completed"
+  | "archived";
+export type CampaignDiscountType = "percentage" | "fixed" | "none";
+export type CampaignAudienceType =
+  | "all_users"
+  | "all_customers"
+  | "previous_customers"
+  | "members_only"
+  | "service_history"
+  | "manual";
+
+export interface CampaignChannels {
+  in_app: boolean;
+  email: boolean;
+  sms: boolean;
+}
+
+export interface CampaignMockSent {
+  in_app: number;
+  email: number;
+  sms: number;
+}
+
+export interface Campaign {
+  id: string;
+  title: string;
+  type: CampaignType;
+  target_id: string | null;
+  target_label: string;
+  status: CampaignStatus;
+  offer_headline: string;
+  offer_body: string;
+  offer_cta: string;
+  offer_code: string | null;
+  discount_type: CampaignDiscountType;
+  discount_value: number | null;
+  start_date: string;
+  end_date: string;
+  max_redemptions: number | null;
+  members_only: boolean;
+  audience_type: CampaignAudienceType;
+  audience_params: Record<string, unknown> | null;
+  channels: CampaignChannels;
+  ai_generated: boolean;
+  mock_reach: number;
+  mock_sent: CampaignMockSent;
+  mock_opens: number;
+  mock_clicks: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  scheduled_at: string | null;
+  /** SMS version (max 160 chars) for preview; not persisted separately if same as offer_body. */
+  sms_version?: string;
+  /** Email subject for preview. */
+  email_subject?: string;
 }

@@ -53,6 +53,10 @@ export const PERMISSIONS = [
   "audit_logs.view",
   "chat.view",
   "chat.send",
+  "campaigns.view",
+  "campaigns.create",
+  "campaigns.edit",
+  "campaigns.publish",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -108,6 +112,10 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "audit_logs.view": "View audit logs",
   "chat.view": "View chat",
   "chat.send": "Send chat messages",
+  "campaigns.view": "View campaigns",
+  "campaigns.create": "Create campaign drafts",
+  "campaigns.edit": "Edit campaigns",
+  "campaigns.publish": "Publish, schedule, pause, archive campaigns",
 } as Record<Permission, string>;
 
 export function isPermission(value: string): value is Permission {

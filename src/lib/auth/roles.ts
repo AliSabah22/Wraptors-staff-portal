@@ -16,11 +16,12 @@ export function getRoleLabel(role: StaffRoleCode): string {
   return ROLE_LABELS[role] ?? role;
 }
 
-/** Normalize legacy role names (e.g. admin) to our three roles. */
+/** Normalize legacy role names (e.g. admin, owner) to our three roles. */
 export function normalizeRole(role: string): StaffRoleCode {
-  if (role === "admin" || role === "ceo") return "ceo";
-  if (role === "receptionist") return "receptionist";
-  if (role === "technician") return "technician";
-  if (role === "sales_manager") return "receptionist"; // map to receptionist for now
+  const r = (role || "").toLowerCase();
+  if (r === "admin" || r === "ceo" || r === "owner") return "ceo";
+  if (r === "receptionist") return "receptionist";
+  if (r === "technician") return "technician";
+  if (r === "sales_manager") return "receptionist"; // map to receptionist for now
   return "technician"; // safe default
 }

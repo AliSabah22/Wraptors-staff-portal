@@ -12,3 +12,7 @@ export { useServicesStore } from "./services";
 export { useMediaStore } from "./media";
 export { useTeamStore } from "./team";
 export { useChatStore } from "./chat";
+export {
+  useCampaignsStore,
+  createEmptyCampaign,
+} from "./campaigns";

@@ -56,6 +56,10 @@ const CEO_PERMISSIONS: Permission[] = [
   "audit_logs.view",
   "chat.view",
   "chat.send",
+  "campaigns.view",
+  "campaigns.create",
+  "campaigns.edit",
+  "campaigns.publish",
 ];
 
 const RECEPTIONIST_PERMISSIONS: Permission[] = [

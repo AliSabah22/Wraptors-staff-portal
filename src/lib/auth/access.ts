@@ -32,6 +32,7 @@ export const ROUTE_PERMISSIONS: { path: string; permission: Permission }[] = [
   { path: "/quote-requests", permission: "quotes.view" },
   { path: "/quotes", permission: "quotes.view" },
   { path: "/pipeline", permission: "pipeline.view" },
+  { path: "/campaigns", permission: "campaigns.view" },
   { path: "/calendar", permission: "calendar.view" },
   { path: "/media", permission: "media.view" },
   { path: "/services", permission: "services.view" },
@@ -72,6 +73,9 @@ export function canAccessRoute(role: StaffRoleCode, pathname: string | null): bo
   if (pathname === "/dashboard/my-jobs") return hasPermission(role, "dashboard.view_personal");
   if (pathname.startsWith("/intelligence")) {
     return hasPermission(role, "intelligence.view");
+  }
+  if (pathname.startsWith("/campaigns")) {
+    return hasPermission(role, "campaigns.view");
   }
   if (pathname.startsWith("/quotes")) {
     return hasPermission(role, "quotes.view");
