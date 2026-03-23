@@ -14,19 +14,12 @@ const root = process.cwd();
 const serverDir = path.join(root, ".next", "server");
 const isWin = process.platform === "win32";
 
+// Keep placeholders only for missing files; never overwrite any manifest that
+// Next has already produced.
 const manifests = [
-  ["pages-manifest.json", {}],
   ["app-paths-manifest.json", {}],
+  ["pages-manifest.json", {}],
   ["server-reference-manifest.json", {}],
-  [
-    "middleware-manifest.json",
-    {
-      sortedMiddleware: [],
-      middleware: {},
-      functions: {},
-      matchers: [],
-    },
-  ],
 ];
 
 function writeManifests() {
@@ -36,7 +29,10 @@ function writeManifests() {
     }
     for (const [name, content] of manifests) {
       const filePath = path.join(serverDir, name);
-      fs.writeFileSync(filePath, JSON.stringify(content, null, 2), "utf8");
+      // Only write if missing — never overwrite manifests Next.js has already written
+      if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, JSON.stringify(content, null, 2), "utf8");
+      }
     }
   } catch (_) {
     // ignore

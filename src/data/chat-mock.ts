@@ -1,3 +1,7 @@
+// TODO: HARDCODED DATA — MIGRATION IN PROGRESS
+// This file is being replaced by lib/data/* Supabase query modules.
+// DO NOT DELETE until Supabase is confirmed working in production.
+
 import type { ChatThread, ChatMessage } from "@/types";
 
 const SHOP_ID = "shop_wraptors_1";

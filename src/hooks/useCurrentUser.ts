@@ -1,17 +1,36 @@
-"use client";
+'use client'
 
-import { useAuthStore } from "@/stores/auth";
-import { normalizeRole } from "@/lib/auth/roles";
-import type { StaffRoleCode } from "@/lib/auth/roles";
+import { useEffect, useState } from 'react'
+import { useAuth } from '@/lib/auth/context'
+import type { StaffRoleCode } from '@/lib/auth/roles'
+
+let currentUserRoleCache: StaffRoleCode | null = null
 
 export function useCurrentUser() {
-  const user = useAuthStore((s) => s.user);
-  const role: StaffRoleCode = user ? normalizeRole(user.role) : "technician";
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { user, staffUser, lockedRole, isAuthenticated, isLoading } = useAuth()
+  const [stableRole, setStableRole] = useState<StaffRoleCode | null>(currentUserRoleCache)
+
+  useEffect(() => {
+    const nextRole = staffUser?.role ?? lockedRole ?? null
+    if (!nextRole) return
+    currentUserRoleCache = nextRole
+    setStableRole(nextRole)
+  }, [staffUser?.role, lockedRole])
+
+  const role: StaffRoleCode = staffUser?.role ?? lockedRole ?? stableRole ?? 'technician'
 
   return {
-    user,
+    user: staffUser
+      ? {
+          id: staffUser.id,
+          email: staffUser.email,
+          name: staffUser.full_name,
+          role: staffUser.role,
+        }
+      : null,
+    authUser: user,
     role,
-    isAuthenticated,
-  };
+    isAuthenticated: () => isAuthenticated,
+    isLoading,
+  }
 }

@@ -1,3 +1,7 @@
+// TODO: HARDCODED DATA — MIGRATION IN PROGRESS
+// This file is being replaced by lib/data/* Supabase query modules.
+// DO NOT DELETE until Supabase is confirmed working in production.
+
 /**
  * Smart Quote Builder — seed data (demo).
  * POST-LAUNCH: Replace with DB-backed templates/multipliers/addons and real quote records.

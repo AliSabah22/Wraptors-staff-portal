@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { getSidebarItemsForRole } from "@/lib/navigation/sidebar";
 import { getDashboardPathForRole } from "@/lib/auth/access";
 import { useUIStore } from "@/stores";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRole } from "@/hooks/useRole";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PanelLeftClose, PanelLeft } from "lucide-react";
@@ -49,7 +49,14 @@ function NavLink({
 export function AppSidebar() {
   const pathname = usePathname();
   const { sidebarOpen, toggleSidebar } = useUIStore();
-  const { role } = useCurrentUser();
+  const { role } = useRole();
+  if (!role) {
+    return (
+      <aside className="flex w-56 shrink-0 items-center justify-center border-r border-wraptors-border bg-wraptors-charcoal">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-wraptors-gold border-t-transparent" />
+      </aside>
+    );
+  }
   const navItems = getSidebarItemsForRole(role);
   const dashboardHref = getDashboardPathForRole(role);
 

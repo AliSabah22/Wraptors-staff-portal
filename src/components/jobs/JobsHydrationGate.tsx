@@ -21,8 +21,20 @@ export function JobsHydrationGate({ children }: { children: React.ReactNode }) {
       setHasHydrated(true);
       return;
     }
+    // Ensure hydration starts even if nothing else has touched this store yet.
+    persist.rehydrate?.();
     const unsub = persist.onFinishHydration?.(() => setHasHydrated(true));
-    return () => unsub?.();
+
+    // Safety fallback: avoid blocking the whole app forever if hydration callback
+    // never fires due to storage/runtime edge cases.
+    const timer = window.setTimeout(() => {
+      setHasHydrated(true);
+    }, 3000);
+
+    return () => {
+      unsub?.();
+      window.clearTimeout(timer);
+    };
   }, []);
 
   if (!hasHydrated) {

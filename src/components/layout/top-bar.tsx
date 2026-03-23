@@ -12,13 +12,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useUIStore, useNotificationsStore, useAuthStore } from "@/stores";
+import { useUIStore, useNotificationsStore } from "@/stores";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRole } from "@/hooks/useRole";
 import { getRoleLabel } from "@/lib/auth/roles";
 
 export function TopBar() {
@@ -27,9 +29,10 @@ export function TopBar() {
   const items = useNotificationsStore((s) => s.items);
   const markAsRead = useNotificationsStore((s) => s.markAsRead);
   const markAllAsRead = useNotificationsStore((s) => s.markAllAsRead);
-  const { user, role } = useCurrentUser();
+  const { user } = useCurrentUser();
+  const { role: resolvedRole } = useRole();
   const { hasPermission } = usePermissions();
-  const logout = useAuthStore((s) => s.logout);
+  const { signOut } = useAuth();
 
   const myNotifications = useMemo(
     () => items.filter((n) => n.userId === user?.id),
@@ -51,10 +54,10 @@ export function TopBar() {
     else setCreateJobModalOpen(true);
   }, [setAddCustomerModalOpen, setCreateQuoteModalOpen, setCreateJobModalOpen]);
 
-  const handleLogout = useCallback(() => {
-    logout();
+  const handleLogout = useCallback(async () => {
+    await signOut();
     router.replace("/login");
-  }, [logout, router]);
+  }, [signOut, router]);
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-wraptors-border bg-wraptors-charcoal/95 backdrop-blur supports-[backdrop-filter]:bg-wraptors-charcoal/80 px-6">
@@ -195,7 +198,9 @@ export function TopBar() {
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-2">
               <p className="text-sm font-medium">{user?.name ?? "—"}</p>
-              <p className="text-xs text-wraptors-muted">{getRoleLabel(role)}</p>
+              <p className="text-xs text-wraptors-muted">
+                {resolvedRole ? getRoleLabel(resolvedRole) : "Loading role..."}
+              </p>
             </div>
             <DropdownMenuSeparator />
             {hasPermission("settings.manage") && (

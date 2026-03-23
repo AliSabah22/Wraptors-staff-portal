@@ -1,3 +1,7 @@
+// TODO: HARDCODED DATA — MIGRATION IN PROGRESS
+// This file is being replaced by lib/data/* Supabase query modules.
+// DO NOT DELETE until Supabase is confirmed working in production.
+
 /**
  * Mock auth data for MVP.
  * Replace with real auth (Supabase, NextAuth, etc.) when backend is ready.

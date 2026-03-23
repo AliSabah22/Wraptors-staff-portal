@@ -1,12 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
-import { AuthGuard } from "@/components/auth/AuthGuard";
 import { AppLayout } from "@/components/layout/app-layout";
-import { JobsHydrationGate } from "@/components/jobs/JobsHydrationGate";
 
-const LOGIN_PATH = "/login";
+const PUBLIC_AUTH_PATHS = ["/login", "/forgot-password", "/reset-password"] as const;
 
 function LoadingSpinner() {
   return (
@@ -22,17 +19,13 @@ function LoadingSpinner() {
 function AuthLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === LOGIN_PATH) {
+  if (pathname && PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return <>{children}</>;
   }
 
-  return (
-    <AuthGuard>
-      <JobsHydrationGate>
-        <AppLayout>{children}</AppLayout>
-      </JobsHydrationGate>
-    </AuthGuard>
-  );
+  // Middleware now owns auth redirects. Avoid client-side hydration deadlocks by
+  // rendering app shell directly on protected routes.
+  return <AppLayout>{children}</AppLayout>;
 }
 
 /**
@@ -40,9 +33,5 @@ function AuthLayoutInner({ children }: { children: React.ReactNode }) {
  * Wrapped in Suspense so usePathname() can resolve without blocking.
  */
 export function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<LoadingSpinner />}>
-      <AuthLayoutInner>{children}</AuthLayoutInner>
-    </Suspense>
-  );
+  return <AuthLayoutInner>{children}</AuthLayoutInner>;
 }

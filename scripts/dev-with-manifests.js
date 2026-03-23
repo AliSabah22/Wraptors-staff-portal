@@ -17,19 +17,12 @@ const isWin = process.platform === "win32";
 const nextArgs = ["next", "dev"];
 const nextCmd = "npx";
 
+// Keep placeholders for manifests that can be required before Next writes them.
+// These are written only when missing and never overwritten.
 const manifests = [
-  ["pages-manifest.json", {}],
   ["app-paths-manifest.json", {}],
+  ["pages-manifest.json", {}],
   ["server-reference-manifest.json", {}],
-  [
-    "middleware-manifest.json",
-    {
-      sortedMiddleware: [],
-      middleware: {},
-      functions: {},
-      matchers: [],
-    },
-  ],
 ];
 
 function writeManifests(onlyIfMissing = false) {

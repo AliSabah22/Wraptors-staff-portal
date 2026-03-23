@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Card,
@@ -20,6 +21,7 @@ import { getRangeForPreset, isDateInRange } from "@/lib/date-range";
 import { DateRangePicker } from "@/components/analytics/date-range-picker";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRole } from "@/hooks/useRole";
 import { TechnicianDashboard } from "@/components/dashboard/technician-dashboard";
 import { ReceptionistDashboard } from "@/components/dashboard/receptionist-dashboard";
 import {
@@ -76,17 +78,36 @@ const revenueData = [
 ];
 
 export function DashboardPage() {
-  const { role } = useCurrentUser();
+  const { role } = useRole();
   const { hasPermission } = usePermissions();
+  const searchParams = useSearchParams();
+  const unauthorized = searchParams.get("error") === "unauthorized";
 
+  if (!role) {
+    return (
+      <div className="flex h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-wraptors-gold border-t-transparent" />
+      </div>
+    );
+  }
+
+  let content: React.ReactNode = <CEODashboard />;
   if (hasPermission("dashboard.view_personal") && !hasPermission("dashboard.view_operational") && !hasPermission("dashboard.view_full")) {
-    return <TechnicianDashboard />;
-  }
-  if (hasPermission("dashboard.view_operational") && !hasPermission("dashboard.view_full")) {
-    return <ReceptionistDashboard />;
+    content = <TechnicianDashboard />;
+  } else if (hasPermission("dashboard.view_operational") && !hasPermission("dashboard.view_full")) {
+    content = <ReceptionistDashboard />;
   }
 
-  return <CEODashboard />;
+  return (
+    <div className="space-y-4">
+      {unauthorized && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm text-amber-300">
+          You don't have permission to access that page.
+        </div>
+      )}
+      {content}
+    </div>
+  );
 }
 
 const todayStr = () => new Date().toDateString();

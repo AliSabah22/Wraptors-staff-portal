@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { errorResponse, serverErrorResponse, successResponse } from "@/lib/api/helpers";
 
 const MODEL = "claude-sonnet-4-20250514";
 const MAX_TOKENS = 1024;
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return errorResponse("Invalid JSON body", 400);
   }
 
   const goal = body.goal ?? "drive sales";
@@ -125,7 +126,7 @@ Respond with ONLY a JSON object (no other text) with keys: title, offer_headline
     const parsed = parseStructuredResponse(text);
 
     if (parsed) {
-      return NextResponse.json(parsed);
+      return successResponse(parsed);
     }
 
     return NextResponse.json(
@@ -146,9 +147,6 @@ Respond with ONLY a JSON object (no other text) with keys: title, offer_headline
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json(
-      { error: message || "AI request failed." },
-      { status: 500 }
-    );
+    return serverErrorResponse(message || "AI request failed.");
   }
 }
