@@ -613,3 +613,137 @@ export interface Campaign {
   /** Email subject for preview. */
   email_subject?: string;
 }
+
+// ============================================================
+// Database-aligned records (snake_case fields for Supabase rows)
+// ============================================================
+
+export interface Job {
+  id: string
+  customer_id: string
+  vehicle_id: string
+  technician_id: string | null
+  quote_request_id: string | null
+  services: string[]
+  status: JobStatus
+  start_date: string | null
+  end_date: string | null
+  price: number | null
+  deposit_paid: number
+  notes: string | null
+  internal_notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PipelineStageRecord {
+  id: string
+  name: string
+  description: string | null
+  color: string
+  position: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface PipelineItem {
+  id: string
+  stage_id: string
+  quote_request_id: string | null
+  job_id: string | null
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ChatThreadRecord {
+  id: string
+  type: "job" | "direct" | "general"
+  job_id: string | null
+  title: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export interface ChatMessageRecord {
+  id: string
+  thread_id: string
+  sender_id: string
+  body: string
+  read_by: string[]
+  created_at: string
+}
+
+export interface Membership {
+  id: string
+  customer_id: string
+  plan: "basic" | "premium" | "vip"
+  status: "active" | "expired" | "cancelled" | "paused"
+  start_date: string
+  end_date: string | null
+  price: number | null
+  auto_renew: boolean
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Review {
+  id: string
+  job_id: string
+  customer_id: string
+  rating: number
+  body: string | null
+  is_public: boolean
+  created_at: string
+}
+
+export interface AppNotification {
+  id: string
+  customer_id: string
+  type: string
+  title: string
+  message: string
+  data: Record<string, unknown> | null
+  read: boolean
+  campaign_id: string | null
+  job_id: string | null
+  created_at: string
+}
+
+export interface InvoiceRecord {
+  id: string
+  job_id: string
+  customer_id: string
+  invoice_number: string
+  status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
+  subtotal: number
+  tax: number
+  total: number
+  due_date: string | null
+  paid_at: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ShopSettings {
+  id: string
+  shop_name: string
+  shop_email: string | null
+  shop_phone: string | null
+  shop_address: string | null
+  shop_city: string | null
+  shop_province: string | null
+  shop_postal_code: string | null
+  shop_country: string
+  shop_logo_url: string | null
+  shop_hours: Record<string, unknown> | null
+  booking_lead_days: number
+  currency: string
+  tax_rate: number
+  updated_at: string
+}
