@@ -21,6 +21,7 @@ import { SHOP_ID } from "@/lib/constants";
 import { useAuthStore } from "./auth";
 import { useJobsStore } from "./jobs";
 import { useVehiclesStore } from "./vehicles";
+import { normalizeRole } from "@/lib/auth/roles";
 import { requireQuoteAccess, requireCeoOnly, canApproveDiscount, canViewQuoteStats } from "@/lib/quote-builder/access";
 import { nextQuoteNumber } from "@/lib/quote-builder/quote-number";
 import {
@@ -75,7 +76,13 @@ export interface UpdateQuotePayload {
 }
 
 function getRole(): string | undefined {
-  return useAuthStore.getState().user?.role;
+  const legacyRole = useAuthStore.getState().user?.role;
+  if (legacyRole) return legacyRole;
+  if (typeof window !== "undefined") {
+    const lockedRole = window.localStorage.getItem("wraptors.lockedRole");
+    if (lockedRole) return normalizeRole(lockedRole);
+  }
+  return undefined;
 }
 
 interface QuoteBuilderState {
@@ -192,22 +199,30 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
       quoteFollowUps: initialFollowUps,
 
       getTemplates: () => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return [];
+        requireQuoteAccess(role);
         return get().quoteTemplates.filter((t) => t.isActive);
       },
 
       getMultipliers: () => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return [];
+        requireQuoteAccess(role);
         return get().vehicleClassMultipliers;
       },
 
       getAddons: () => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return [];
+        requireQuoteAccess(role);
         return get().quoteAddons.filter((a) => a.isActive);
       },
 
       getQuotes: (filters = {}, page = 1, pageSize = 20) => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return { items: [], total: 0, page, pageSize };
+        requireQuoteAccess(role);
         let list = [...get().quotes];
         if (filters.status) list = list.filter((q) => q.status === filters.status);
         if (filters.createdBy) list = list.filter((q) => q.createdByUserId === filters.createdBy);
@@ -234,12 +249,16 @@ export const useQuoteBuilderStore = create<QuoteBuilderStore>()(
       },
 
       getLineItemsByQuoteId: (quoteId) => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return [];
+        requireQuoteAccess(role);
         return get().quoteLineItems.filter((li) => li.quoteId === quoteId);
       },
 
       getFollowUpsByQuoteId: (quoteId) => {
-        requireQuoteAccess(getRole());
+        const role = getRole();
+        if (!role) return [];
+        requireQuoteAccess(role);
         return get().quoteFollowUps.filter((f) => f.quoteId === quoteId);
       },
 

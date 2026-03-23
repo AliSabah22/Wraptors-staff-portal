@@ -6,11 +6,11 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   useCampaignsStore,
-  useAuthStore,
   useNotificationsStore,
   useServicesStore,
 } from "@/stores";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
 import { resolveAudienceSegment } from "@/lib/campaigns/distribution";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,7 +38,7 @@ function generateCampaignId() {
 
 export default function NewCampaignPage() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const { staffUser, isLoading } = useAuth();
   const services = useServicesStore((s) => s.services);
   const addCampaign = useCampaignsStore((s) => s.addCampaign);
   const setMockAnalyticsForPublish = useCampaignsStore((s) => s.setMockAnalyticsForPublish);
@@ -148,7 +148,7 @@ export default function NewCampaignPage() {
         mock_sent: { in_app: 0, email: 0, sms: 0 },
         mock_opens: 0,
         mock_clicks: 0,
-        created_by: user?.id ?? "",
+        created_by: staffUser?.id ?? "",
         created_at: now,
         updated_at: now,
         published_at: publishedAt,
@@ -159,7 +159,7 @@ export default function NewCampaignPage() {
       addCampaign(campaign);
       return id;
     },
-    [form, user?.id, estimatedReach, addCampaign]
+    [form, staffUser?.id, estimatedReach, addCampaign]
   );
 
   const handleSaveDraft = useCallback(() => {
@@ -172,7 +172,7 @@ export default function NewCampaignPage() {
       const id = persistCampaign("scheduled", null, at);
       addNotification({
         shopId: SHOP_ID,
-        userId: user?.id ?? "",
+        userId: staffUser?.id ?? "",
         type: "campaign_scheduled",
         title: "Campaign scheduled",
         message: `Campaign "${form.title || "Untitled"}" has been scheduled for ${new Date(at).toLocaleString()}.`,
@@ -183,7 +183,7 @@ export default function NewCampaignPage() {
       setScheduling(false);
       router.push(`/campaigns/${id}`);
     },
-    [persistCampaign, form.title, user?.id, addNotification, router]
+    [persistCampaign, form.title, staffUser?.id, addNotification, router]
   );
 
   const handlePublishNow = useCallback(() => {
@@ -191,7 +191,7 @@ export default function NewCampaignPage() {
     setMockAnalyticsForPublish(id, estimatedReach, form.channels);
     addNotification({
       shopId: SHOP_ID,
-      userId: user?.id ?? "",
+      userId: staffUser?.id ?? "",
       type: "campaign_live",
       title: "Campaign live",
       message: `Campaign "${form.title || "Untitled"}" is now live. Estimated reach: ${estimatedReach.toLocaleString()} users.`,
@@ -201,7 +201,7 @@ export default function NewCampaignPage() {
     });
     setPublishSuccess(true);
     setTimeout(() => router.push(`/campaigns/${id}`), 2000);
-  }, [persistCampaign, setMockAnalyticsForPublish, estimatedReach, form.channels, form.title, user?.id, addNotification, router]);
+  }, [persistCampaign, setMockAnalyticsForPublish, estimatedReach, form.channels, form.title, staffUser?.id, addNotification, router]);
 
   const canPublish = hasPermission("campaigns.publish");
 
@@ -214,7 +214,11 @@ export default function NewCampaignPage() {
     }
   }, [scheduling, scheduledAt]);
 
-  if (!user) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (!staffUser) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
         <p className="text-wraptors-muted">Please sign in to create a campaign.</p>

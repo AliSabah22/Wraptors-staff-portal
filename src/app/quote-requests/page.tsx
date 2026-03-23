@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useQuotesStore } from "@/stores";
@@ -21,8 +21,15 @@ const statusVariant: Record<string, "default" | "secondary" | "success" | "warni
 };
 
 export default function QuoteRequestsPage() {
+  const [mounted, setMounted] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const quotes = useQuotesStore((s) => s.quotes);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <motion.div
