@@ -323,8 +323,18 @@ export function IntelligenceChat() {
               disabled={isLoading}
               maxLength={MAX_MESSAGE_LENGTH}
             />
-            <Button type="submit" disabled={!input.trim() || isLoading}>
-              <Send className="h-4 w-4" />
+            <Button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              aria-label={
+                isLoading
+                  ? "Sending message"
+                  : !input.trim()
+                    ? "Send message (type something first)"
+                    : "Send message"
+              }
+            >
+              <Send className="h-4 w-4" aria-hidden />
             </Button>
           </div>
           {input.length >= 800 && (

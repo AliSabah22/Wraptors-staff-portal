@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { normalizeRole } from "@/lib/auth/roles";
-import { mockStaff } from "@/data/mock";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getRevenueContext,
   getJobsContext,
@@ -81,8 +81,13 @@ function gatherContext(modules: ContextModule[]): Record<string, unknown> {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const userId = request.headers.get("x-user-id") ?? request.headers.get("X-User-Id") ?? "";
-  const user = mockStaff.find((u) => u.id === userId);
-  const role = user ? normalizeRole(user.role) : "technician";
+  const admin = createAdminClient();
+  const { data: staffRow } = await admin
+    .from("staff_users")
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+  const role = staffRow?.role ? normalizeRole(staffRow.role) : "technician";
   if (role !== "ceo") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -28,10 +28,14 @@ interface Column {
 
 const DELETE_ZONE_ID = "delete-lead";
 
+function leadColumnId(lead: PipelineLead): string {
+  return lead.pipelineColumnId ?? lead.stage;
+}
+
 type PipelineKanbanProps = {
   leads: PipelineLead[];
   columns: Column[];
-  onMoveLead: (leadId: string, newStage: PipelineStage) => void;
+  onMoveLead: (leadId: string, newStage: PipelineStage | string) => void;
   /** When provided, shows "Drop here to delete customer" zone. Omit for roles without customers.delete. */
   onDeleteLead?: (lead: PipelineLead) => void;
   onViewProfile?: (lead: PipelineLead) => void;
@@ -223,7 +227,7 @@ export function PipelineKanban({
   const leadsByColumn = useMemo(() => {
     const map: Record<string, PipelineLead[]> = {};
     columns.forEach((col) => {
-      map[col.id] = leads.filter((l) => l.stage === col.id);
+      map[col.id] = leads.filter((l) => leadColumnId(l) === col.id);
     });
     return map;
   }, [leads, columns]);
@@ -255,7 +259,7 @@ export function PipelineKanban({
     }
 
     const newStage = over.id as string;
-    if (!lead || lead.stage === newStage) return;
+    if (!lead || leadColumnId(lead) === newStage) return;
 
     const isValidStage = columns.some((c) => c.id === newStage);
     if (!isValidStage) return;

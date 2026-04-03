@@ -334,8 +334,8 @@ export function JobDetailView({
     >
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/jobs">
-            <ArrowLeft className="h-4 w-4" />
+          <Link href="/jobs" aria-label="Back to jobs list">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
           </Link>
         </Button>
         <div className="flex-1 min-w-0">

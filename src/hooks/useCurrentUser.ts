@@ -7,17 +7,17 @@ import type { StaffRoleCode } from '@/lib/auth/roles'
 let currentUserRoleCache: StaffRoleCode | null = null
 
 export function useCurrentUser() {
-  const { user, staffUser, lockedRole, isAuthenticated, isLoading } = useAuth()
+  const { user, staffUser, isAuthenticated, isLoading } = useAuth()
   const [stableRole, setStableRole] = useState<StaffRoleCode | null>(currentUserRoleCache)
 
   useEffect(() => {
-    const nextRole = staffUser?.role ?? lockedRole ?? null
+    const nextRole = staffUser?.role ?? null
     if (!nextRole) return
     currentUserRoleCache = nextRole
     setStableRole(nextRole)
-  }, [staffUser?.role, lockedRole])
+  }, [staffUser?.role])
 
-  const role: StaffRoleCode = staffUser?.role ?? lockedRole ?? stableRole ?? 'technician'
+  const role: StaffRoleCode = staffUser?.role ?? stableRole ?? 'technician'
 
   return {
     user: staffUser

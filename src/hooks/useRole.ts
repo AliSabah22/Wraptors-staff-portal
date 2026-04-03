@@ -9,17 +9,17 @@ import { hasPermission } from '@/lib/auth/role-permissions'
 let roleCache: StaffRoleCode | null = null
 
 export function useRole() {
-  const { staffUser, lockedRole } = useAuth()
+  const { staffUser } = useAuth()
   const [stableRole, setStableRole] = useState<StaffRoleCode | null>(roleCache)
 
   useEffect(() => {
-    const nextRole = staffUser?.role ?? lockedRole ?? null
+    const nextRole = staffUser?.role ?? null
     if (!nextRole) return
     roleCache = nextRole
     setStableRole(nextRole)
-  }, [staffUser?.role, lockedRole])
+  }, [staffUser?.role])
 
-  const role = (staffUser?.role ?? lockedRole ?? stableRole ?? null) as StaffRoleCode | null
+  const role = (staffUser?.role ?? stableRole ?? null) as StaffRoleCode | null
 
   return {
     role,

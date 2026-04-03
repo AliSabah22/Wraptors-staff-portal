@@ -1,7 +1,17 @@
 import { create } from "zustand";
 import type { PipelineLead, PipelineStage, QuoteStatus } from "@/types";
-import { mockPipeline } from "@/data/mock";
 import { useQuotesStore } from "./quotes";
+
+function isPipelineStage(s: string): s is PipelineStage {
+  return (
+    s === "lead" ||
+    s === "consultation" ||
+    s === "quote_sent" ||
+    s === "follow_up" ||
+    s === "booked" ||
+    s === "lost"
+  );
+}
 
 /** Map pipeline stage to quote request status for syncing Quote Requests tab */
 const pipelineStageToQuoteStatus: Record<PipelineStage, QuoteStatus> = {
@@ -17,7 +27,8 @@ interface PipelineState {
   leads: PipelineLead[];
   setLeads: (leads: PipelineLead[]) => void;
   getLeadById: (id: string) => PipelineLead | undefined;
-  updateLeadStage: (id: string, stage: PipelineStage) => void;
+  /** `newStage` is either a legacy `PipelineStage` or a Supabase `pipeline_stages` UUID. */
+  updateLeadStage: (id: string, newStage: PipelineStage | string) => void;
   addLead: (lead: PipelineLead) => void;
   updateLead: (id: string, data: Partial<PipelineLead>) => void;
   removeLeadsByCustomerId: (customerId: string) => void;
@@ -25,22 +36,36 @@ interface PipelineState {
 }
 
 export const usePipelineStore = create<PipelineState>((set, get) => ({
-  leads: mockPipeline,
+  leads: [],
 
   setLeads: (leads) => set({ leads }),
 
   getLeadById: (id) => get().leads.find((l) => l.id === id),
 
-  updateLeadStage: (id, stage) => {
+  updateLeadStage: (id, newStage) => {
     const lead = get().leads.find((l) => l.id === id);
-    if (lead?.quoteRequestId) {
-      const quoteStatus = pipelineStageToQuoteStatus[stage];
+    if (lead?.quoteRequestId && isPipelineStage(newStage)) {
+      const quoteStatus = pipelineStageToQuoteStatus[newStage];
       useQuotesStore.getState().updateQuoteStatus(lead.quoteRequestId, quoteStatus);
     }
     set((state) => ({
-      leads: state.leads.map((l) =>
-        l.id === id ? { ...l, stage, updatedAt: new Date().toISOString() } : l
-      ),
+      leads: state.leads.map((l) => {
+        if (l.id !== id) return l;
+        const updatedAt = new Date().toISOString();
+        if (isPipelineStage(newStage)) {
+          return {
+            ...l,
+            stage: newStage,
+            pipelineColumnId: undefined,
+            updatedAt,
+          };
+        }
+        return {
+          ...l,
+          pipelineColumnId: newStage,
+          updatedAt,
+        };
+      }),
     }));
   },
 

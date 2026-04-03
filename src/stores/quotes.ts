@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { QuoteRequest, QuoteStatus } from "@/types";
-import { mockQuotes } from "@/data/mock";
 
 interface QuotesState {
   quotes: QuoteRequest[];
@@ -13,7 +12,7 @@ interface QuotesState {
 }
 
 export const useQuotesStore = create<QuotesState>((set, get) => ({
-  quotes: mockQuotes,
+  quotes: [],
 
   setQuotes: (quotes) => set({ quotes }),
 

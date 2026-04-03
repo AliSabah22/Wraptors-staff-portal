@@ -14,7 +14,6 @@ import type {
   BlockerHistoryEntry,
 } from "@/types";
 import { STAGE_PROGRESS } from "@/types";
-import { mockJobs } from "@/data/mock";
 import { BLOCK_TYPE_LABELS } from "@/lib/job-workflow/config";
 
 /**
@@ -61,7 +60,7 @@ interface JobsState {
 export const useJobsStore = create<JobsState>()(
   persist(
     (set, get) => ({
-  jobs: mockJobs,
+  jobs: [],
 
   setJobs: (jobs) => set({ jobs }),
 
@@ -391,10 +390,11 @@ export const useJobsStore = create<JobsState>()(
           : Array.isArray(raw?.state?.jobs)
             ? raw.state.jobs
             : null;
-        return {
-          ...current,
-          jobs: persistedJobs ?? current.jobs,
-        };
+        // Never let an empty persisted snapshot wipe in-memory jobs (server seed runs in useEffect).
+        if (persistedJobs != null && persistedJobs.length > 0) {
+          return { ...current, jobs: persistedJobs };
+        }
+        return { ...current };
       },
       storage: createJSONStorage(() =>
         typeof window !== "undefined"

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { MediaAsset } from "@/types";
-import { mockMedia } from "@/data/mock";
 
 interface MediaState {
   items: MediaAsset[];
@@ -10,7 +9,7 @@ interface MediaState {
 }
 
 export const useMediaStore = create<MediaState>((set, get) => ({
-  items: mockMedia,
+  items: [],
 
   setItems: (items) => set({ items }),
 

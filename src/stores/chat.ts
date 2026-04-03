@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import type { ChatThread, ChatMessage } from "@/types";
-import { mockChatThreads, mockChatMessages } from "@/data/chat-mock";
 
 interface ChatState {
   threads: ChatThread[];
@@ -25,8 +24,8 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  threads: [...mockChatThreads],
-  messages: [...mockChatMessages],
+  threads: [],
+  messages: [],
   readUpTo: {},
 
   addMessage: (threadId, senderId, body, options = {}) => {

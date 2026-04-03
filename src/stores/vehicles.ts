@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { Vehicle } from "@/types";
-import { mockVehicles } from "@/data/mock";
 
 interface VehiclesState {
   vehicles: Vehicle[];
@@ -11,7 +10,7 @@ interface VehiclesState {
 }
 
 export const useVehiclesStore = create<VehiclesState>((set, get) => ({
-  vehicles: mockVehicles,
+  vehicles: [],
 
   setVehicles: (vehicles) => set({ vehicles }),
 

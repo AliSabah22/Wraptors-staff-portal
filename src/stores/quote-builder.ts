@@ -21,7 +21,6 @@ import { SHOP_ID } from "@/lib/constants";
 import { useAuthStore } from "./auth";
 import { useJobsStore } from "./jobs";
 import { useVehiclesStore } from "./vehicles";
-import { normalizeRole } from "@/lib/auth/roles";
 import { requireQuoteAccess, requireCeoOnly, canApproveDiscount, canViewQuoteStats } from "@/lib/quote-builder/access";
 import { nextQuoteNumber } from "@/lib/quote-builder/quote-number";
 import {
@@ -76,13 +75,7 @@ export interface UpdateQuotePayload {
 }
 
 function getRole(): string | undefined {
-  const legacyRole = useAuthStore.getState().user?.role;
-  if (legacyRole) return legacyRole;
-  if (typeof window !== "undefined") {
-    const lockedRole = window.localStorage.getItem("wraptors.lockedRole");
-    if (lockedRole) return normalizeRole(lockedRole);
-  }
-  return undefined;
+  return useAuthStore.getState().user?.role;
 }
 
 interface QuoteBuilderState {

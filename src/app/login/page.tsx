@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, Mail, Shield, Loader2, Eye, EyeOff } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const canUseSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http') && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
@@ -148,5 +148,19 @@ export default function LoginPage() {
         <p className="mt-8 text-center text-xs text-wraptors-muted/80">Wraptors Staff Portal · Confidential</p>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-wraptors-black p-6 text-wraptors-muted">
+          Loading…
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }

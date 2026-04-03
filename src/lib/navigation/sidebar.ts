@@ -18,7 +18,6 @@ import {
   Bell,
   Settings,
   MessageCircle,
-  Upload,
   Sparkles,
   Megaphone,
   type LucideIcon,
@@ -82,11 +81,10 @@ function getSidebarForReceptionist(): SidebarNavItem[] {
 function getSidebarForTechnician(): SidebarNavItem[] {
   return [
     { label: "Dashboard", href: "/dashboard/my-jobs", icon: LayoutDashboard },
-    { label: "My Jobs", href: "/jobs", icon: Wrench },
-    { label: "Uploads", href: "/media", icon: Upload },
-    { label: "Team", href: "/team", icon: UserCog },
-    { label: "Notifications", href: "/notifications", icon: Bell },
+    { label: "Jobs", href: "/jobs", icon: Wrench },
+    { label: "Calendar", href: "/calendar", icon: Calendar },
     { label: "Chat", href: "/chat", icon: MessageCircle },
+    { label: "Notifications", href: "/notifications", icon: Bell },
   ];
 }
 

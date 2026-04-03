@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { NotificationItem } from "@/types";
-import { mockNotifications } from "@/data/mock";
 
 interface NotificationsState {
   items: NotificationItem[];
@@ -12,7 +11,7 @@ interface NotificationsState {
 }
 
 export const useNotificationsStore = create<NotificationsState>((set, get) => ({
-  items: mockNotifications,
+  items: [],
 
   setItems: (items) => set({ items }),
 

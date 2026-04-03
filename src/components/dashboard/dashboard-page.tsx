@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useJobsStore, useQuotesStore, useNotificationsStore, useTeamStore } from "@/stores";
+import type { QuoteRequest, ServiceJob } from "@/types";
 import { useQuoteBuilderStore } from "@/stores/quote-builder";
 import { canViewQuoteStats } from "@/lib/quote-builder/access";
 import { mockInvoices } from "@/data/mock";
@@ -66,6 +67,12 @@ const item = {
   show: { opacity: 1, y: 0 },
 };
 
+export type DashboardHydration = {
+  jobs: ServiceJob[];
+  quotes: QuoteRequest[];
+  monthlyRevenueMtd: number;
+};
+
 // Mock chart data
 const revenueData = [
   { month: "Sep", revenue: 42000 },
@@ -77,11 +84,21 @@ const revenueData = [
   { month: "Mar", revenue: 65000 },
 ];
 
-export function DashboardPage() {
+export function DashboardPage({ hydration }: { hydration?: DashboardHydration | null }) {
   const { role } = useRole();
   const { hasPermission } = usePermissions();
   const searchParams = useSearchParams();
   const unauthorized = searchParams.get("error") === "unauthorized";
+
+  useEffect(() => {
+    if (!hydration) return;
+    const apply = () => {
+      useJobsStore.getState().setJobs(hydration.jobs);
+      useQuotesStore.getState().setQuotes(hydration.quotes);
+    };
+    apply();
+    return useJobsStore.persist.onFinishHydration(apply);
+  }, [hydration]);
 
   if (!role) {
     return (
@@ -91,7 +108,9 @@ export function DashboardPage() {
     );
   }
 
-  let content: React.ReactNode = <CEODashboard />;
+  let content: React.ReactNode = (
+    <CEODashboard monthlyRevenueMtd={hydration?.monthlyRevenueMtd} />
+  );
   if (hasPermission("dashboard.view_personal") && !hasPermission("dashboard.view_operational") && !hasPermission("dashboard.view_full")) {
     content = <TechnicianDashboard />;
   } else if (hasPermission("dashboard.view_operational") && !hasPermission("dashboard.view_full")) {
@@ -112,7 +131,8 @@ export function DashboardPage() {
 
 const todayStr = () => new Date().toDateString();
 
-export function CEODashboard() {
+export function CEODashboard(props?: { monthlyRevenueMtd?: number }) {
+  const monthlyRevenueMtd = props?.monthlyRevenueMtd;
   const [dateRange, setDateRange] = useState(() => getRangeForPreset("last_30"));
 
   const { user, role } = useCurrentUser();
@@ -145,13 +165,14 @@ export function CEODashboard() {
     [quotes]
   );
 
-  const monthlyRevenue = useMemo(
-    () =>
+  const monthlyRevenue = useMemo(() => {
+    if (monthlyRevenueMtd !== undefined) return monthlyRevenueMtd;
+    return (
       mockInvoices
         .filter((i) => i.status === "paid" || i.status === "sent")
-        .reduce((sum, i) => sum + i.total, 0) + 22700,
-    []
-  );
+        .reduce((sum, i) => sum + i.total, 0) + 22700
+    );
+  }, [monthlyRevenueMtd]);
 
   const completedJobsInRange = useMemo(
     () => jobsInRange.filter((j) => j.progress === 100),

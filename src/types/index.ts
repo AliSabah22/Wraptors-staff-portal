@@ -279,6 +279,10 @@ export const PIPELINE_LEAD_SOURCE_META = "meta_lead_ads";
 export interface PipelineLead {
   id: string;
   shopId: ShopId;
+  /** Supabase `pipeline_items.id` when hydrated from the operational board. */
+  pipelineItemId?: string;
+  /** Supabase `pipeline_stages.id`; when set, Kanban groups by this instead of `stage`. */
+  pipelineColumnId?: string;
   quoteRequestId?: string;
   customerId?: string;
   name: string;

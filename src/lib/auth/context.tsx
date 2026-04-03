@@ -4,13 +4,12 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo } 
 import type { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { StaffUserProfile } from '@/lib/auth/helpers'
-import { normalizeRole, type StaffRoleCode } from '@/lib/auth/roles'
+import { normalizeRole } from '@/lib/auth/roles'
 
 interface AuthContextType {
   user: User | null
   staffUser: StaffUserProfile | null
   session: Session | null
-  lockedRole: StaffRoleCode | null
   isLoading: boolean
   isAuthenticated: boolean
   signOut: () => Promise<void>
@@ -23,7 +22,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [staffUser, setStaffUser] = useState<StaffUserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
-  const [lockedRole, setLockedRole] = useState<StaffRoleCode | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const canUseSupabase = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http') &&
@@ -31,23 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
   // Keep one browser client instance for the provider lifetime.
   const supabase = useMemo(() => (canUseSupabase ? createClient() : null), [canUseSupabase])
-  const ROLE_STORAGE_KEY = 'wraptors.lockedRole'
-  const ROLE_USER_STORAGE_KEY = 'wraptors.lockedRoleUserId'
-
-  const getStoredLockedRole = useCallback((userId: string): StaffRoleCode | null => {
-    if (typeof window === 'undefined') return null
-    const storedUserId = window.localStorage.getItem(ROLE_USER_STORAGE_KEY)
-    const storedRole = window.localStorage.getItem(ROLE_STORAGE_KEY)
-    if (!storedRole || storedUserId !== userId) return null
-    return normalizeRole(storedRole)
-  }, [])
-
-  const persistLockedRole = useCallback((userId: string, role: StaffRoleCode) => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(ROLE_USER_STORAGE_KEY, userId)
-    window.localStorage.setItem(ROLE_STORAGE_KEY, role)
-    setLockedRole(role)
-  }, [])
 
   const fetchStaffProfile = useCallback(
     async (userId: string) => {
@@ -66,10 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...data,
           role: normalizeRole(data.role),
         }
-        const storedRole = getStoredLockedRole(userId)
-        const effectiveRole = storedRole ?? normalized.role
-        if (!storedRole) persistLockedRole(userId, normalized.role)
-        normalized.role = effectiveRole
 
         if (normalized.is_active === false) {
           await supabase.auth.signOut()
@@ -86,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
     },
-    [getStoredLockedRole, persistLockedRole, supabase]
+    [supabase]
   )
 
   const refreshUser = useCallback(async () => {
@@ -119,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
-          setLockedRole(getStoredLockedRole(session.user.id))
           await fetchStaffProfile(session.user.id)
         }
       })
@@ -142,7 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'SIGNED_OUT') {
         setStaffUser(null)
-        setLockedRole(null)
         if (window.location.pathname !== '/login') {
           window.location.replace('/login?reason=session_expired')
         }
@@ -151,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session?.user) {
-        setLockedRole(getStoredLockedRole(session.user.id))
         await fetchStaffProfile(session.user.id)
       }
       setIsLoading(false)
@@ -168,7 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setStaffUser(null)
     setSession(null)
-    setLockedRole(null)
   }
 
   return (
@@ -177,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         staffUser,
         session,
-        lockedRole,
         isLoading,
         // Treat a valid Supabase session as authenticated even if profile lookup
         // is temporarily unavailable, so the UI doesn't deadlock on loaders.

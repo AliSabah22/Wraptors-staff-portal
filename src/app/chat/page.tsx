@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { Suspense, useMemo, useState, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MessageCircle, Wrench, UserPlus } from "lucide-react";
@@ -23,7 +23,7 @@ import { ChatComposer } from "@/components/chat/chat-composer";
 import type { ChatThread } from "@/types";
 import type { StaffRoleCode } from "@/lib/auth/roles";
 
-export default function ChatPage() {
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const threadParam = searchParams.get("thread");
@@ -251,5 +251,17 @@ export default function ChatPage() {
         </main>
       </div>
     </motion.div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-1 items-center justify-center text-wraptors-muted">Loading chat…</div>
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
   );
 }
