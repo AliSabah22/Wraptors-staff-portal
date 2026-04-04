@@ -17,7 +17,8 @@
     "db:studio": "supabase studio",
     "predev": "node -e \"try { require.resolve('next'); } catch(e) { console.error('Run yarn or npm install first'); process.exit(1); }\"",
     "db:seed": "supabase db seed",
-    "setup:test-user": "tsx scripts/create-test-user.ts"
+    "setup:test-user": "tsx scripts/create-test-user.ts",
+    "setup:receptionist-user": "tsx scripts/create-receptionist-user.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

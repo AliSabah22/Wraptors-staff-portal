@@ -423,6 +423,85 @@ export type Database = {
           },
         ]
       }
+      job_warranties: {
+        Row: {
+          id: string
+          job_id: string
+          coverage_description: string
+          expires_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          coverage_description: string
+          expires_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          coverage_description?: string
+          expires_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_warranties_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_condition_reports: {
+        Row: {
+          id: string
+          job_id: string
+          zones: Json
+          photo_storage_paths: string[]
+          acknowledgment_token: string | null
+          acknowledgment_token_expires_at: string | null
+          acknowledged_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          zones?: Json
+          photo_storage_paths?: string[]
+          acknowledgment_token?: string | null
+          acknowledgment_token_expires_at?: string | null
+          acknowledged_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          zones?: Json
+          photo_storage_paths?: string[]
+          acknowledgment_token?: string | null
+          acknowledgment_token_expires_at?: string | null
+          acknowledged_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_condition_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           created_at: string | null
@@ -773,15 +852,21 @@ export type Database = {
       }
       quote_requests: {
         Row: {
+          approval_token: string | null
+          approval_token_expires_at: string | null
+          approved_at: string | null
           converted_job_id: string | null
           created_at: string | null
           customer_email: string
           customer_id: string | null
           customer_name: string
           customer_phone: string | null
+          decline_reason: string | null
+          declined_at: string | null
           estimated_value: number | null
           id: string
           notes: string | null
+          quote_line_items: Json
           services_requested: string[] | null
           source: string
           status: string
@@ -789,15 +874,21 @@ export type Database = {
           vehicle_id: string | null
         }
         Insert: {
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          approved_at?: string | null
           converted_job_id?: string | null
           created_at?: string | null
           customer_email: string
           customer_id?: string | null
           customer_name: string
           customer_phone?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
           estimated_value?: number | null
           id?: string
           notes?: string | null
+          quote_line_items?: Json
           services_requested?: string[] | null
           source?: string
           status?: string
@@ -805,15 +896,21 @@ export type Database = {
           vehicle_id?: string | null
         }
         Update: {
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          approved_at?: string | null
           converted_job_id?: string | null
           created_at?: string | null
           customer_email?: string
           customer_id?: string | null
           customer_name?: string
           customer_phone?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
           estimated_value?: number | null
           id?: string
           notes?: string | null
+          quote_line_items?: Json
           services_requested?: string[] | null
           source?: string
           status?: string
@@ -919,6 +1016,7 @@ export type Database = {
         Row: {
           booking_lead_days: number | null
           currency: string | null
+          google_review_url: string | null
           id: string
           shop_address: string | null
           shop_city: string | null
@@ -936,6 +1034,7 @@ export type Database = {
         Insert: {
           booking_lead_days?: number | null
           currency?: string | null
+          google_review_url?: string | null
           id?: string
           shop_address?: string | null
           shop_city?: string | null
@@ -953,6 +1052,7 @@ export type Database = {
         Update: {
           booking_lead_days?: number | null
           currency?: string | null
+          google_review_url?: string | null
           id?: string
           shop_address?: string | null
           shop_city?: string | null

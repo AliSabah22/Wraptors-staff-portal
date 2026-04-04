@@ -4,8 +4,20 @@ import { requirePermission } from '@/lib/auth/helpers'
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/helpers'
 import { parseBody } from '@/lib/api/validate'
 
+const dataOrHttpUrl = z.string().refine(
+  (s) => {
+    try {
+      const u = new URL(s)
+      return u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'data:'
+    } catch {
+      return false
+    }
+  },
+  { message: 'Must be a valid http(s) or data URL' }
+)
+
 const AddMediaSchema = z.object({
-  url: z.string().url(),
+  url: dataOrHttpUrl,
   storage_path: z.string().optional(),
   type: z.enum(['before', 'after', 'progress']),
   caption: z.string().optional().nullable(),

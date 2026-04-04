@@ -9,7 +9,10 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Car, FileText, Phone, Mail, Trash2 } from "lucide-react";
+import { ArrowLeft, Car, FileText, Phone, Mail, Trash2, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { mapDbVehicleRowToVehicle } from "@/lib/server-data/hydration-mappers";
 import { DeleteCustomerOptionsDialog } from "@/components/customers/delete-customer-options-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMergeJobsIntoStore } from "@/hooks/useSeedJobsStore";
@@ -27,7 +30,19 @@ export function CustomerDetailPageClient({
 }) {
   const router = useRouter();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [vMake, setVMake] = useState("");
+  const [vModel, setVModel] = useState("");
+  const [vYear, setVYear] = useState(String(new Date().getFullYear()));
+  const [vColor, setVColor] = useState("");
+  const [vVin, setVVin] = useState("");
+  const [vPlate, setVPlate] = useState("");
+  const [vehicleSaving, setVehicleSaving] = useState(false);
+  const [vehicleError, setVehicleError] = useState<string | null>(null);
+  const [decodeLoading, setDecodeLoading] = useState(false);
   const getCustomerById = useCustomersStore((s) => s.getCustomerById);
+  const addVehicleToCustomer = useCustomersStore((s) => s.addVehicleToCustomer);
+  const addVehicle = useVehiclesStore((s) => s.addVehicle);
 
   useEffect(() => {
     const prev = useCustomersStore
@@ -50,6 +65,83 @@ export function CustomerDetailPageClient({
   const jobs = useJobsStore((s) => s.jobs);
   const { hasPermission } = usePermissions();
   const canDeleteCustomer = hasPermission("customers.delete");
+  const canAddVehicle = hasPermission("vehicles.create");
+
+  const handleDecodeVin = async () => {
+    setVehicleError(null);
+    setDecodeLoading(true);
+    try {
+      const q = new URLSearchParams({ vin: vVin.trim() });
+      const res = await fetch(`/api/vehicles/decode-vin?${q}`);
+      const body = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: { make: string; model: string; year: number };
+      };
+      if (!body?.success || !body.data) {
+        setVehicleError(body?.error ?? "Decode failed");
+        return;
+      }
+      setVMake(body.data.make);
+      setVModel(body.data.model);
+      setVYear(String(body.data.year));
+    } catch {
+      setVehicleError("Network error while decoding VIN.");
+    } finally {
+      setDecodeLoading(false);
+    }
+  };
+
+  const handleAddVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canAddVehicle) return;
+    setVehicleError(null);
+    const year = parseInt(vYear, 10);
+    if (!vMake.trim() || !vModel.trim() || Number.isNaN(year)) {
+      setVehicleError("Make, model, and a valid year are required.");
+      return;
+    }
+    setVehicleSaving(true);
+    try {
+      const res = await fetch("/api/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_id: customerId,
+          make: vMake.trim(),
+          model: vModel.trim(),
+          year,
+          color: vColor.trim() || null,
+          vin: vVin.trim() || null,
+          license_plate: vPlate.trim() || null,
+          notes: null,
+        }),
+      });
+      const body = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: Record<string, unknown>;
+      };
+      if (!body?.success || !body.data) {
+        setVehicleError(body?.error ?? "Could not save vehicle.");
+        return;
+      }
+      const vehicle = mapDbVehicleRowToVehicle(body.data);
+      addVehicle(vehicle);
+      addVehicleToCustomer(customerId, vehicle.id);
+      setShowAddVehicle(false);
+      setVMake("");
+      setVModel("");
+      setVYear(String(new Date().getFullYear()));
+      setVColor("");
+      setVVin("");
+      setVPlate("");
+    } catch {
+      setVehicleError("Network error while saving vehicle.");
+    } finally {
+      setVehicleSaving(false);
+    }
+  };
 
   if (!customer) {
     return (
@@ -118,12 +210,101 @@ export function CustomerDetailPageClient({
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2">
               <Car className="h-4 w-4 text-wraptors-gold" /> Vehicles
             </CardTitle>
+            {canAddVehicle && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAddVehicle((s) => !s);
+                  setVehicleError(null);
+                }}
+              >
+                {showAddVehicle ? "Cancel" : "Add vehicle"}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
+            <p className="text-xs text-wraptors-muted mb-4 border-l-2 border-wraptors-gold/40 pl-3">
+              Warranties are tracked on completed jobs — open a job to add or view coverage.
+            </p>
+            {showAddVehicle && canAddVehicle && (
+              <form
+                onSubmit={handleAddVehicle}
+                className="mb-6 space-y-3 rounded-lg border border-wraptors-border/80 bg-wraptors-charcoal/20 p-4"
+              >
+                <p className="text-xs text-wraptors-muted">
+                  Enter a 17-character VIN and use <span className="text-wraptors-gold/90">Decode VIN</span>{" "}
+                  to fill make, model, and year (NHTSA).
+                </p>
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-wraptors-muted text-xs">VIN</Label>
+                    <Input
+                      value={vVin}
+                      onChange={(e) => setVVin(e.target.value)}
+                      className="mt-1 font-mono text-sm"
+                      placeholder="17-character VIN"
+                      maxLength={17}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={decodeLoading || !hasPermission("vehicles.view")}
+                    onClick={() => void handleDecodeVin()}
+                  >
+                    {decodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Decode VIN"}
+                  </Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-wraptors-muted text-xs">Make</Label>
+                    <Input value={vMake} onChange={(e) => setVMake(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-wraptors-muted text-xs">Model</Label>
+                    <Input value={vModel} onChange={(e) => setVModel(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-wraptors-muted text-xs">Year</Label>
+                    <Input
+                      type="number"
+                      value={vYear}
+                      onChange={(e) => setVYear(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-wraptors-muted text-xs">Color</Label>
+                    <Input value={vColor} onChange={(e) => setVColor(e.target.value)} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-wraptors-muted text-xs">License plate</Label>
+                    <Input value={vPlate} onChange={(e) => setVPlate(e.target.value)} className="mt-1" />
+                  </div>
+                </div>
+                {vehicleError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    {vehicleError}
+                  </p>
+                )}
+                <Button type="submit" disabled={vehicleSaving} className="bg-wraptors-gold text-wraptors-black">
+                  {vehicleSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save vehicle"
+                  )}
+                </Button>
+              </form>
+            )}
             <ul className="space-y-3">
               {customerVehicles.map((v) => (
                 <li

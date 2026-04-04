@@ -85,6 +85,8 @@ const RECEPTIONIST_PERMISSIONS: Permission[] = [
   "media.view",
   "media.upload",
   "services.view",
+  "invoices.view",
+  "invoices.manage",
   "notifications.view",
   "team.view",
   "chat.view",

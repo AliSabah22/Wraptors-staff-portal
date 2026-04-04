@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useJobsStore, useUIStore, useCustomersStore, useVehiclesStore, useTeamStore } from "@/stores";
 import { DeleteCustomerOptionsDialog } from "@/components/customers/delete-customer-options-dialog";
 import { JOB_STAGES } from "@/types";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LayoutGrid, List, Plus, Wrench } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getScopedJobs } from "@/lib/data-scope/scope";
@@ -95,6 +97,10 @@ export function JobsPageClient({
     [scopedJobs]
   );
 
+  const searchParams = useSearchParams();
+  const filterParam = searchParams.get("filter");
+  const statusParam = searchParams.get("status");
+
   const jobsWithDetails = useMemo(() => {
     return activeJobs.map((job) => {
       const v = getVehicleById(job.vehicleId);
@@ -112,6 +118,34 @@ export function JobsPageClient({
       };
     });
   }, [activeJobs, customerNameById, technicianNameById, getVehicleById, serviceCatalog]);
+
+  const filteredJobsWithDetails = useMemo(() => {
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const isTerminal = (j: (typeof jobsWithDetails)[number]) =>
+      j.status === "completed" || j.status === "cancelled";
+    const dueKey = (j: (typeof jobsWithDetails)[number]) => j.dueDate.slice(0, 10);
+
+    let list = jobsWithDetails;
+    if (filterParam === "due_today") {
+      list = list.filter((j) => !isTerminal(j) && dueKey(j) === todayUtc);
+    }
+    if (filterParam === "overdue") {
+      list = list.filter((j) => !isTerminal(j) && dueKey(j) < todayUtc);
+    }
+    if (statusParam === "in_progress") {
+      const inProgressStages = new Set<JobStage>(["intake", "installation", "inspection_final"]);
+      list = list.filter(
+        (j) =>
+          !isTerminal(j) &&
+          j.status !== "ready_for_pickup" &&
+          inProgressStages.has(j.stage)
+      );
+    }
+    if (statusParam === "ready_for_pickup") {
+      list = list.filter((j) => j.status === "ready_for_pickup");
+    }
+    return list;
+  }, [jobsWithDetails, filterParam, statusParam]);
 
   const onDeleteCustomer = useCallback((customerId: string, customerName: string) => {
     setDeleteDialogCustomerId(customerId);
@@ -137,7 +171,8 @@ export function JobsPageClient({
     []
   );
 
-  const isEmpty = jobsWithDetails.length === 0;
+  const isEmpty = filteredJobsWithDetails.length === 0;
+  const hasUrlFilter = Boolean(filterParam || statusParam);
 
   return (
     <motion.div
@@ -151,8 +186,18 @@ export function JobsPageClient({
             {hasPermission("jobs.view_assigned") && !hasPermission("jobs.view_operational") ? "My Jobs" : "Active Jobs"}
           </h1>
           <p className="text-wraptors-muted mt-0.5">
-            {activeJobs.length} {hasPermission("jobs.view_assigned") && !hasPermission("jobs.view_operational") ? "assigned to you" : "vehicles in shop"}
+            {hasUrlFilter
+              ? `${filteredJobsWithDetails.length} matching filter`
+              : `${activeJobs.length} ${hasPermission("jobs.view_assigned") && !hasPermission("jobs.view_operational") ? "assigned to you" : "vehicles in shop"}`}
           </p>
+          {hasUrlFilter && (
+            <p className="text-xs text-wraptors-gold/90 mt-1">
+              Filtered view —{" "}
+              <Link href="/jobs" className="underline hover:text-wraptors-gold">
+                Clear filter
+              </Link>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {hasPermission("jobs.create") && (
@@ -202,13 +247,13 @@ export function JobsPageClient({
         </Card>
       ) : activeJobsView === "kanban" ? (
         <JobsKanban
-          jobs={jobsWithDetails}
+          jobs={filteredJobsWithDetails}
           columns={kanbanColumns}
           onMoveJob={handleMoveJob}
           onDeleteCustomer={hasPermission("customers.delete") ? onDeleteCustomer : undefined}
         />
       ) : (
-        <JobsTable jobs={jobsWithDetails} />
+        <JobsTable jobs={filteredJobsWithDetails} />
       )}
 
       <DeleteCustomerOptionsDialog

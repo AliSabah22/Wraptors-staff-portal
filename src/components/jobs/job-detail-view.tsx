@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  dbJobStatusToJobStage,
+  dbJobStatusToOperationalStatus,
+} from "@/lib/server-data/hydration-mappers";
+import { operationalStatusToDbStatus } from "@/lib/job-workflow/operational-db-status";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Car, Wrench, UserCog, Camera, StickyNote, Check, Trash2, Loader2, AlertTriangle, Save } from "lucide-react";
+import { ArrowLeft, User, Car, Wrench, UserCog, Camera, StickyNote, Check, Trash2, Loader2, AlertTriangle, Save, Receipt } from "lucide-react";
 import { JobThreadPanel } from "@/components/chat/job-thread-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +62,9 @@ import {
   buildTechnicianResolutionNotification,
   toNotificationItem,
 } from "@/lib/job-workflow/blocker-notifications";
+import { ComingSoonCard } from "@/components/ui/coming-soon-card";
+import { JobWarrantiesPanel } from "@/components/jobs/job-warranties-panel";
+import { JobConditionReportPanel } from "@/components/jobs/job-condition-report-panel";
 import {
   RESOLUTION_BUTTON_LABELS,
   getTimelineLabel,
@@ -72,6 +80,7 @@ import { getJobNotesForDisplay } from "@/lib/job-notes";
 import { jobThreadTitle } from "@/lib/chat/format";
 import { getJobThreadParticipantIds } from "@/lib/chat/participants";
 import type { ServiceJob, JobStage, JobPriority, JobStatus, BlockTypeKey, BlockRequestDetails } from "@/types";
+import { STAGE_PROGRESS } from "@/types";
 import type { Customer, Vehicle, Service, StaffUser, MediaAsset } from "@/types";
 
 interface JobDetailViewProps {
@@ -101,7 +110,7 @@ export function JobDetailView({
   const updateJobStage = useJobsStore((s) => s.updateJobStage);
   const setJobBlocker = useJobsStore((s) => s.setJobBlocker);
   const setJobPriority = useJobsStore((s) => s.setJobPriority);
-  const setJobStatus = useJobsStore((s) => s.setJobStatus);
+  const patchJob = useJobsStore((s) => s.patchJob);
   const setScheduledStartDate = useJobsStore((s) => s.setScheduledStartDate);
   const setPickupTargetTime = useJobsStore((s) => s.setPickupTargetTime);
   const setDropOffDate = useJobsStore((s) => s.setDropOffDate);
@@ -129,11 +138,122 @@ export function JobDetailView({
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [operationalStatusError, setOperationalStatusError] = useState<string | null>(null);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [mediaKind, setMediaKind] = useState<"before" | "after" | "progress">("progress");
+  const [mediaUploadError, setMediaUploadError] = useState<string | null>(null);
+  const [jobInvoices, setJobInvoices] = useState<
+    { id: string; invoice_number: string; status: string; total: number }[]
+  >([]);
+  const [invoiceLoadDone, setInvoiceLoadDone] = useState(false);
+  const [invoiceWorking, setInvoiceWorking] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
+
+  const photoSummary = job.jobMediaSummary ?? { before: 0, after: 0, progress: 0 };
+  const canMarkCompleted =
+    photoSummary.before >= 1 && photoSummary.after >= 1;
+
+  const canViewInvoices = hasPermission("invoices.view");
+
+  useEffect(() => {
+    setJobInvoices([]);
+    setInvoiceError(null);
+    if (!canViewInvoices) {
+      setInvoiceLoadDone(true);
+      return;
+    }
+    setInvoiceLoadDone(false);
+    let cancelled = false;
+    fetch(`/api/invoices?job_id=${encodeURIComponent(job.id)}`)
+      .then((r) => r.json())
+      .then(
+        (body: {
+          success?: boolean;
+          data?: {
+            invoices?: { id: string; invoice_number: string; status: string; total: number }[];
+          };
+        }) => {
+          if (cancelled || !body?.success || !body.data?.invoices) return;
+          setJobInvoices(body.data.invoices);
+        }
+      )
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setInvoiceLoadDone(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [job.id, canViewInvoices]);
 
   const handleSaveChanges = () => {
     setSaveMessage("Changes saved. Updates will appear on the calendar.");
     setTimeout(() => setSaveMessage(null), 3000);
+  };
+
+  const handleOperationalStatusChange = async (v: JobStatus) => {
+    if (v === job.status) return;
+    if (!hasPermission("jobs.edit_basic") || job.isBlocked) return;
+    setOperationalStatusError(null);
+    const dbStatus = operationalStatusToDbStatus(v, job.dbJobStatus);
+    setStatusSaving(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: dbStatus }),
+      });
+      const body = (await res.json()) as { success?: boolean; error?: string; data?: { status?: string; updated_at?: string } };
+      if (!body?.success) {
+        setOperationalStatusError(body?.error ?? "Could not update status.");
+        return;
+      }
+      const row = body.data;
+      const nextDb = String(row?.status ?? dbStatus);
+      const nextStage = dbJobStatusToJobStage(nextDb);
+      patchJob(job.id, {
+        dbJobStatus: nextDb,
+        status: dbJobStatusToOperationalStatus(nextDb),
+        stage: nextStage,
+        progress: STAGE_PROGRESS[nextStage],
+        completedAt:
+          nextDb === "completed"
+            ? String(row?.updated_at ?? new Date().toISOString())
+            : undefined,
+      });
+    } catch {
+      setOperationalStatusError("Network error while updating status.");
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
+    if (!hasPermission("invoices.manage")) return;
+    setInvoiceError(null);
+    setInvoiceWorking(true);
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: job.id }),
+      });
+      const body = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: { id: string; invoice_number: string; status: string; total: number };
+      };
+      if (!body?.success || !body.data) {
+        setInvoiceError(body?.error ?? "Could not create invoice.");
+        return;
+      }
+      setJobInvoices((prev) => [...prev, body.data!]);
+    } catch {
+      setInvoiceError("Network error while creating invoice.");
+    } finally {
+      setInvoiceWorking(false);
+    }
   };
 
   const canOverrideStageRules = role === "ceo" || role === "receptionist";
@@ -279,6 +399,7 @@ export function JobDetailView({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setMediaUploadError(null);
     const isVideo = file.type.startsWith("video/");
     setMediaUploading(true);
     if (isVideo) {
@@ -300,10 +421,12 @@ export function JobDetailView({
       addMedia(asset);
       addMediaToJob(job.id, id);
       setMediaUploading(false);
-    } else {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const url = reader.result as string;
+      return;
+    }
+    if (!hasPermission("media.upload")) {
+      const readerLocal = new FileReader();
+      readerLocal.onload = () => {
+        const url = readerLocal.result as string;
         const now = new Date().toISOString();
         const id = `media_${Date.now()}`;
         const asset: MediaAsset = {
@@ -322,8 +445,66 @@ export function JobDetailView({
         addMediaToJob(job.id, id);
         setMediaUploading(false);
       };
-      reader.readAsDataURL(file);
+      readerLocal.readAsDataURL(file);
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const url = reader.result as string;
+      try {
+        const res = await fetch(`/api/jobs/${job.id}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, type: mediaKind }),
+        });
+        const body = (await res.json()) as {
+          success?: boolean;
+          error?: string;
+          data?: { id?: string; url?: string; created_at?: string; type?: string };
+        };
+        if (!body?.success || !body.data?.id) {
+          setMediaUploadError(body?.error ?? "Could not save photo to job media.");
+          setMediaUploading(false);
+          return;
+        }
+        const row = body.data;
+        const id = String(row.id);
+        const now = String(row.created_at ?? new Date().toISOString());
+        const kind =
+          row.type === "before" || row.type === "after" || row.type === "progress"
+            ? row.type
+            : mediaKind;
+        const asset: MediaAsset = {
+          id,
+          shopId: SHOP_ID,
+          jobId: job.id,
+          customerId: customer?.id,
+          vehicleId: vehicle?.id,
+          type: "photo",
+          jobMediaKind: kind,
+          url: String(row.url ?? url),
+          visibility: "internal",
+          uploadedBy: user?.id ?? "staff_1",
+          createdAt: now,
+        };
+        addMedia(asset);
+        addMediaToJob(job.id, id);
+        const current = useJobsStore.getState().getJobById(job.id);
+        const s = current?.jobMediaSummary ?? { before: 0, after: 0, progress: 0 };
+        patchJob(job.id, {
+          jobMediaSummary: {
+            before: s.before + (kind === "before" ? 1 : 0),
+            after: s.after + (kind === "after" ? 1 : 0),
+            progress: s.progress + (kind === "progress" ? 1 : 0),
+          },
+        });
+      } catch {
+        setMediaUploadError("Network error while uploading.");
+      } finally {
+        setMediaUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -531,6 +712,86 @@ export function JobDetailView({
               )}
             </CardContent>
           </Card>
+
+          {canViewInvoices && invoiceLoadDone && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-wraptors-gold" /> Billing
+                </CardTitle>
+                <p className="text-xs text-wraptors-muted mt-1">Invoices for this job</p>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {jobInvoices.length > 0 ? (
+                  <ul className="space-y-2">
+                    {jobInvoices.map((inv) => (
+                      <li
+                        key={inv.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-wraptors-border/60 px-3 py-2"
+                      >
+                        <span className="font-mono text-xs text-wraptors-muted">
+                          {inv.invoice_number}
+                        </span>
+                        <Badge variant="outline">{inv.status}</Badge>
+                        <span className="text-wraptors-gold font-medium">
+                          {formatCurrency(inv.total)}
+                        </span>
+                        <Link
+                          href="/invoices"
+                          className="text-xs text-wraptors-gold hover:underline"
+                        >
+                          Open invoices
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-wraptors-muted text-sm">No invoice for this job yet.</p>
+                )}
+                {invoiceError && (
+                  <p className="text-xs text-red-400" role="alert">
+                    {invoiceError}
+                  </p>
+                )}
+                {job.status === "completed" &&
+                  jobInvoices.length === 0 &&
+                  hasPermission("invoices.manage") && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-wraptors-gold text-wraptors-black hover:bg-wraptors-gold/90"
+                      disabled={invoiceWorking}
+                      onClick={() => void handleGenerateInvoice()}
+                    >
+                      {invoiceWorking ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Creating…
+                        </>
+                      ) : (
+                        "Generate invoice"
+                      )}
+                    </Button>
+                  )}
+                {jobInvoices.length > 0 && (
+                  <ComingSoonCard
+                    title="Stripe customer checkout"
+                    description="Email or SMS a payment link so the customer can pay this invoice by card."
+                    blockedBy="Stripe Payment Links / Connect — not wired in this portal yet."
+                    className="mt-2"
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <JobWarrantiesPanel
+            jobId={job.id}
+            showWhenCompleted
+            jobCompleted={job.status === "completed"}
+          />
+          <JobConditionReportPanel jobId={job.id} />
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -645,21 +906,50 @@ export function JobDetailView({
               <div>
                 <Label className="text-wraptors-muted text-xs">Status</Label>
                 {hasPermission("jobs.edit_basic") && !job.isBlocked ? (
-                  <Select
-                    value={job.status ?? "active"}
-                    onValueChange={(v) => setJobStatus(job.id, v as JobStatus)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RECEPTIONIST_SETTABLE_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {JOB_STATUS_LABELS[s]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select
+                      value={job.status ?? "active"}
+                      disabled={statusSaving}
+                      onValueChange={(v) => {
+                        void handleOperationalStatusChange(v as JobStatus);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RECEPTIONIST_SETTABLE_STATUSES.map((s) => (
+                          <SelectItem
+                            key={s}
+                            value={s}
+                            disabled={
+                              s === "completed" &&
+                              !canMarkCompleted &&
+                              job.status !== "completed"
+                            }
+                          >
+                            {JOB_STATUS_LABELS[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="mt-3 space-y-1.5 border-l-2 border-wraptors-gold/50 pl-3 text-xs text-wraptors-muted">
+                      <p className="font-medium text-wraptors-gold/90">Photos required to mark completed</p>
+                      <p>
+                        Before: {photoSummary.before} · After: {photoSummary.after}
+                        {!canMarkCompleted && job.status !== "completed" && (
+                          <span className="block mt-1 text-wraptors-muted">
+                            Add at least one before and one after photo (use the media type selector below).
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {operationalStatusError && (
+                      <p className="text-xs text-red-400 mt-2" role="alert">
+                        {operationalStatusError}
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <div className="text-sm text-wraptors-muted-light mt-1">
                     <Badge variant="outline">{JOB_STATUS_LABELS[job.status ?? "active"]}</Badge>
@@ -853,9 +1143,34 @@ export function JobDetailView({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-wraptors-muted mb-4">
-                Upload photos/videos.
+              <p className="text-sm text-wraptors-muted mb-3">
+                Photos can be saved to job media (before / after / progress) for completion rules. Videos stay in-browser only.
               </p>
+              {hasPermission("media.upload") && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <Label className="text-wraptors-muted text-xs whitespace-nowrap">Photo type</Label>
+                  <Select
+                    value={mediaKind}
+                    onValueChange={(v) =>
+                      setMediaKind(v as "before" | "after" | "progress")
+                    }
+                  >
+                    <SelectTrigger className="w-44 h-9 mt-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="before">Before</SelectItem>
+                      <SelectItem value="after">After</SelectItem>
+                      <SelectItem value="progress">Progress</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {mediaUploadError && (
+                <p className="text-xs text-red-400 mb-2" role="alert">
+                  {mediaUploadError}
+                </p>
+              )}
               <input
                 ref={mediaInputRef}
                 type="file"

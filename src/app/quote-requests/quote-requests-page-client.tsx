@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useQuotesStore } from "@/stores";
 import type { QuoteRequest } from "@/types";
@@ -26,6 +27,13 @@ export function QuoteRequestsPageClient({ initialQuotes }: { initialQuotes: Quot
   const [mounted, setMounted] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const quotes = useQuotesStore((s) => s.quotes);
+  const searchParams = useSearchParams();
+  const statusFilter = searchParams.get("status");
+
+  const visibleQuotes = useMemo(() => {
+    if (statusFilter === "new") return quotes.filter((q) => q.status === "new");
+    return quotes;
+  }, [quotes, statusFilter]);
 
   useEffect(() => {
     setQuotes(initialQuotes);
@@ -47,15 +55,24 @@ export function QuoteRequestsPageClient({ initialQuotes }: { initialQuotes: Quot
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quote Requests</h1>
           <p className="text-wraptors-muted mt-0.5">
-            From mobile app and other channels
+            {statusFilter === "new"
+              ? `${visibleQuotes.length} new request${visibleQuotes.length !== 1 ? "s" : ""}`
+              : "From mobile app and other channels"}
           </p>
+          {statusFilter === "new" && (
+            <p className="text-xs text-wraptors-gold/90 mt-1">
+              <Link href="/quote-requests" className="underline hover:text-wraptors-gold">
+                Show all quote requests
+              </Link>
+            </p>
+          )}
         </div>
         <Button className="gap-2" onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" /> Create quote request
         </Button>
       </div>
 
-      {quotes.length === 0 ? (
+      {visibleQuotes.length === 0 && quotes.length === 0 ? (
         <Card className="border-wraptors-border border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-wraptors-gold/10 text-wraptors-gold mb-4">
@@ -68,6 +85,12 @@ export function QuoteRequestsPageClient({ initialQuotes }: { initialQuotes: Quot
             <Button className="mt-6 gap-2" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" /> Create quote request
             </Button>
+          </CardContent>
+        </Card>
+      ) : visibleQuotes.length === 0 ? (
+        <Card className="border-wraptors-border border-dashed">
+          <CardContent className="py-12 text-center text-wraptors-muted text-sm">
+            No quote requests match this filter.
           </CardContent>
         </Card>
       ) : (
@@ -85,7 +108,7 @@ export function QuoteRequestsPageClient({ initialQuotes }: { initialQuotes: Quot
               </tr>
             </thead>
             <tbody>
-              {quotes.map((q) => (
+              {visibleQuotes.map((q) => (
                 <tr
                   key={q.id}
                   className="border-b border-wraptors-border/50 hover:bg-wraptors-surface-hover/50"

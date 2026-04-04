@@ -53,6 +53,8 @@ interface JobsState {
   addJobNote: (jobId: string, note: string, visibility?: NoteVisibility, userId?: string) => void;
   assignTechnician: (jobId: string, technicianId: string | undefined) => void;
   addMediaToJob: (jobId: string, mediaId: string) => void;
+  /** Shallow-merge fields on a job (e.g. after API success). */
+  patchJob: (jobId: string, patch: Partial<ServiceJob>) => void;
   addJob: (job: ServiceJob) => void;
   removeJobsByCustomerId: (customerId: string) => void;
 }
@@ -367,6 +369,16 @@ export const useJobsStore = create<JobsState>()(
               mediaIds: [...job.mediaIds, mediaId],
               updatedAt: new Date().toISOString(),
             }
+          : job
+      ),
+    }));
+  },
+
+  patchJob: (jobId, patch) => {
+    set((state) => ({
+      jobs: state.jobs.map((job) =>
+        job.id === jobId
+          ? { ...job, ...patch, updatedAt: new Date().toISOString() }
           : job
       ),
     }));

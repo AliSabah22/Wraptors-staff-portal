@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select'
 import type { StaffRoleCode } from '@/lib/auth/roles'
 import { useAuth } from '@/hooks/useAuth'
+import { ComingSoonCard } from '@/components/ui/coming-soon-card'
 
 interface StaffRow {
   id: string
@@ -170,8 +171,25 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-wraptors-muted">
-            Configure which events trigger internal notifications. (Placeholder — connect in production.)
+            Configure which events trigger internal notifications.
           </p>
+          <ComingSoonCard
+            title="SMS notifications"
+            description="Send staff alerts and customer updates by text message."
+            blockedBy="Requires Twilio or similar provider and verified sender IDs — not connected yet."
+          />
+          {isCEO && (
+            <div className="rounded-lg border border-wraptors-border/80 bg-wraptors-charcoal/30 p-4 space-y-2">
+              <p className="text-sm font-medium text-white">Google review link</p>
+              <p className="text-xs text-wraptors-muted">
+                When a job is marked complete, the customer app receives a{" "}
+                <code className="text-wraptors-gold/90">review_request</code> notification. Set{" "}
+                <code className="text-wraptors-gold/90">GOOGLE_REVIEW_URL</code> in the server
+                environment so the payload can include your public review URL. Optional DB field
+                can be added later for per-shop overrides.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

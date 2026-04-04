@@ -1,7 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password", "/auth/callback"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+  "/quotes/approve",
+  "/condition-report",
+];
+/** Unauthenticated API routes (e.g. customer quote approval by token). */
+const PUBLIC_API_PREFIXES = ["/api/public/"];
 const APP_API_ROUTES = ["/api/app/"];
 
 export async function middleware(request: NextRequest) {
@@ -19,12 +28,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.next();
   }
 
   const { supabaseResponse, user, hasStaffProfile } = await updateSession(request);
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
   const isAuthorizedStaff = !!user && hasStaffProfile;
 
   if (pathname === "/") {

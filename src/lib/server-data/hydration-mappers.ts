@@ -69,7 +69,7 @@ export function buildServiceNameToIdMap(
   return m
 }
 
-function dbJobStatusToJobStage(status: string): JobStage {
+export function dbJobStatusToJobStage(status: string): JobStage {
   switch (status) {
     case 'intake':
       return 'intake'
@@ -87,7 +87,7 @@ function dbJobStatusToJobStage(status: string): JobStage {
   }
 }
 
-function dbJobStatusToOperationalStatus(status: string): JobStatus {
+export function dbJobStatusToOperationalStatus(status: string): JobStatus {
   if (status === 'cancelled') return 'cancelled'
   if (status === 'completed') return 'completed'
   if (status === 'ready_for_pickup') return 'ready_for_pickup'
@@ -128,6 +128,7 @@ export function mapDbJobRowToServiceJob(
     stage,
     progress,
     status: dbJobStatusToOperationalStatus(dbStatus),
+    dbJobStatus: dbStatus,
     priority: 'standard',
     dueDate: endDate ?? startDate ?? createdAt.slice(0, 10),
     scheduledStartDate: startDate,
@@ -159,10 +160,17 @@ export function mapDbJobRowToServiceJobWithMedia(
   const rawMedia = row.job_media as Record<string, unknown>[] | null | undefined
   const mediaItems: MediaAsset[] = []
   const mediaIds: string[] = []
+  let before = 0
+  let after = 0
+  let progress = 0
   if (Array.isArray(rawMedia)) {
     for (const m of rawMedia) {
       const id = String(m.id)
       mediaIds.push(id)
+      const kind = String(m.type ?? 'progress')
+      if (kind === 'before') before += 1
+      else if (kind === 'after') after += 1
+      else progress += 1
       mediaItems.push({
         id,
         shopId: '',
@@ -170,6 +178,7 @@ export function mapDbJobRowToServiceJobWithMedia(
         customerId: job.customerId,
         vehicleId: job.vehicleId,
         type: 'photo',
+        jobMediaKind: kind === 'before' || kind === 'after' || kind === 'progress' ? kind : 'progress',
         url: String(m.url ?? ''),
         caption: m.caption != null ? String(m.caption) : undefined,
         uploadedBy: m.uploaded_by != null ? String(m.uploaded_by) : 'system',
@@ -177,7 +186,14 @@ export function mapDbJobRowToServiceJobWithMedia(
       })
     }
   }
-  return { job: { ...job, mediaIds }, mediaItems }
+  return {
+    job: {
+      ...job,
+      mediaIds,
+      jobMediaSummary: { before, after, progress },
+    },
+    mediaItems,
+  }
 }
 
 const DB_QUOTE_STATUS_TO_UI: Record<string, QuoteStatus> = {

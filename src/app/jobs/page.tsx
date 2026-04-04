@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth/helpers";
@@ -71,10 +72,12 @@ export default async function JobsPage() {
   );
 
   return (
-    <JobsPageClient
-      initialJobs={initialJobs}
-      initialCustomers={initialCustomers}
-      initialVehicles={initialVehicles}
-    />
+    <Suspense fallback={<div className="p-8 text-wraptors-muted text-sm">Loading jobs…</div>}>
+      <JobsPageClient
+        initialJobs={initialJobs}
+        initialCustomers={initialCustomers}
+        initialVehicles={initialVehicles}
+      />
+    </Suspense>
   );
 }

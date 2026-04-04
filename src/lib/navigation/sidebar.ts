@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Sparkles,
   Megaphone,
+  Radio,
   type LucideIcon,
 } from "lucide-react";
 import type { StaffRoleCode } from "@/lib/auth/roles";
@@ -36,6 +37,7 @@ export interface SidebarNavItem {
 function getSidebarForCEO(): SidebarNavItem[] {
   return [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Live board", href: "/dashboard/live", icon: Radio },
     { label: "Campaigns", href: "/campaigns", icon: Megaphone },
     { label: "Intelligence", href: "/intelligence", icon: Sparkles },
     { label: "Active Jobs", href: "/jobs", icon: Wrench },
@@ -61,6 +63,7 @@ function getSidebarForCEO(): SidebarNavItem[] {
 function getSidebarForReceptionist(): SidebarNavItem[] {
   return [
     { label: "Dashboard", href: "/dashboard/operations", icon: LayoutDashboard },
+    { label: "Live board", href: "/dashboard/live", icon: Radio },
     { label: "Customers", href: "/customers", icon: Users },
     { label: "Active Jobs", href: "/jobs", icon: Wrench },
     { label: "Quote Requests", href: "/quote-requests", icon: FileText },
@@ -69,6 +72,7 @@ function getSidebarForReceptionist(): SidebarNavItem[] {
     { label: "Calendar", href: "/calendar", icon: Calendar },
     { label: "Media Library", href: "/media", icon: Image },
     { label: "Services", href: "/services", icon: Package },
+    { label: "Invoices", href: "/invoices", icon: Receipt },
     { label: "Team", href: "/team", icon: UserCog },
     { label: "Notifications", href: "/notifications", icon: Bell },
     { label: "Chat", href: "/chat", icon: MessageCircle },

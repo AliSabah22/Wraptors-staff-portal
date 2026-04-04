@@ -203,6 +203,10 @@ export interface ServiceJob {
   progress: number;
   /** Operational status; defaults to active. */
   status?: JobStatus;
+  /** Supabase `jobs.status` for API round-trips (intake, in_progress, …). */
+  dbJobStatus?: string;
+  /** Counts from `job_media` (server); used for completion checklist. */
+  jobMediaSummary?: { before: number; after: number; progress: number };
   /** Priority for scheduling; defaults to standard. */
   priority?: JobPriority;
   dueDate: string;
@@ -348,6 +352,8 @@ export interface MediaAsset {
   customerId?: string;
   vehicleId?: string;
   type: "photo" | "video";
+  /** When synced from `job_media`. */
+  jobMediaKind?: "before" | "after" | "progress";
   url: string;
   thumbnailUrl?: string;
   title?: string;

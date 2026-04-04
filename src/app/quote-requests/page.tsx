@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/helpers";
 import { mapDbQuoteRowToQuoteRequest } from "@/lib/server-data/hydration-mappers";
@@ -18,5 +19,9 @@ export default async function QuoteRequestsPage() {
     mapDbQuoteRowToQuoteRequest(row as unknown as Record<string, unknown>)
   );
 
-  return <QuoteRequestsPageClient initialQuotes={initialQuotes} />;
+  return (
+    <Suspense fallback={<div className="p-8 text-wraptors-muted text-sm">Loading…</div>}>
+      <QuoteRequestsPageClient initialQuotes={initialQuotes} />
+    </Suspense>
+  );
 }

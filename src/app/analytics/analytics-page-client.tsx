@@ -28,6 +28,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { usePermissions } from "@/hooks/usePermissions";
 
 type InvoiceAnalyticsRow = {
   total: number;
@@ -54,8 +55,13 @@ export function AnalyticsPageClient({
   initialQuotes: QuoteRequest[];
 }) {
   const setQuotes = useQuotesStore((s) => s.setQuotes);
+  const { hasPermission } = usePermissions();
   const [dateRange, setDateRange] = useState(() => getRangeForPreset("last_30"));
   const [invoices, setInvoices] = useState<InvoiceAnalyticsRow[]>([]);
+  const [techPeriod, setTechPeriod] = useState<"week" | "month">("week");
+  const [techRows, setTechRows] = useState<
+    { id: string; name: string; completed_jobs: number; revenue: number; avg_rating: number | null }[]
+  >([]);
   const jobs = useJobsStore((s) => s.jobs);
   const quotes = useQuotesStore((s) => s.quotes);
 
@@ -83,6 +89,34 @@ export function AnalyticsPageClient({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasPermission("analytics.view_full")) return;
+    let cancelled = false;
+    fetch(`/api/analytics/technicians?period=${techPeriod}`)
+      .then((r) => r.json())
+      .then(
+        (body: {
+          success?: boolean;
+          data?: {
+            technicians?: {
+              id: string;
+              name: string;
+              completed_jobs: number;
+              revenue: number;
+              avg_rating: number | null;
+            }[];
+          };
+        }) => {
+          if (cancelled || !body?.success || !body.data?.technicians) return;
+          setTechRows(body.data.technicians);
+        }
+      )
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [hasPermission, techPeriod]);
 
   const { revenueData, conversionData } = useMemo(() => {
     const months = getMonthsInRange(dateRange.from, dateRange.to);
@@ -226,6 +260,70 @@ export function AnalyticsPageClient({
           </div>
         </CardContent>
       </Card>
+
+      {hasPermission("analytics.view_full") && (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>Technician performance</CardTitle>
+              <CardDescription>Completed jobs and revenue from Supabase</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTechPeriod("week")}
+                className={`rounded-md px-3 py-1 text-sm ${
+                  techPeriod === "week"
+                    ? "bg-wraptors-gold/20 text-wraptors-gold"
+                    : "text-wraptors-muted hover:text-white"
+                }`}
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => setTechPeriod("month")}
+                className={`rounded-md px-3 py-1 text-sm ${
+                  techPeriod === "month"
+                    ? "bg-wraptors-gold/20 text-wraptors-gold"
+                    : "text-wraptors-muted hover:text-white"
+                }`}
+              >
+                Month
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl border border-wraptors-border overflow-x-auto">
+              <table className="w-full text-sm min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-wraptors-border bg-wraptors-charcoal/50">
+                    <th className="text-left font-medium text-wraptors-muted px-4 py-3">Technician</th>
+                    <th className="text-left font-medium text-wraptors-muted px-4 py-3">Completed</th>
+                    <th className="text-left font-medium text-wraptors-muted px-4 py-3">Revenue</th>
+                    <th className="text-left font-medium text-wraptors-muted px-4 py-3">Avg rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {techRows.map((t) => (
+                    <tr key={t.id} className="border-b border-wraptors-border/50">
+                      <td className="px-4 py-3 font-medium">{t.name}</td>
+                      <td className="px-4 py-3">{t.completed_jobs}</td>
+                      <td className="px-4 py-3 text-wraptors-gold">{formatCurrency(t.revenue)}</td>
+                      <td className="px-4 py-3 text-wraptors-muted">
+                        {t.avg_rating != null ? `${t.avg_rating} ★` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {techRows.length === 0 && (
+                <p className="p-6 text-sm text-wraptors-muted text-center">No completed jobs in this period.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </motion.div>
   );
 }
